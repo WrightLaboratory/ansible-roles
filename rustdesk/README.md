@@ -1,4 +1,6 @@
 ```bash
+source ./.venv/bin/activate
+
 ansible-galaxy collection install -r requirements.yaml
 
 
@@ -12,4 +14,7 @@ envsubst < inventory.yaml.template > inventory.yaml
 
 # test connection to target node
 ansible --user="${TARGET_USER}" -m ping -i inventory.yaml rustdesk
+
+# run playbook
+ansible-playbook  --user="${TARGET_USER}" -i inventory.yaml playbook.yaml
 ```
