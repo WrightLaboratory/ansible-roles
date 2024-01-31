@@ -1,0 +1,64 @@
+---
+- name: setup rustdesk relay and server
+  hosts: rustdesk
+  become: true
+
+  tasks:
+  - name: get almalinux version
+    ansible.builtin.shell:
+      cmd: grep -e "^VERSION_ID=" /etc/os-release | cut -d= -f2 | tr -d "\""
+    changed_when: false
+    register: almalinux_version
+
+  - name: upgrade almalinux release
+    ansible.builtin.command:
+      cmd: dnf -y upgrade almalinux-release
+    when: almalinux_version.stdout is version("8.7", '<=')
+
+  - name: upgrade all packages
+    ansible.builtin.package:
+      name: "*"
+      state: latest
+    register: result
+    retries: 5
+    until: result is success
+
+  - name: install packages
+    ansible.builtin.package:
+      name:
+      - podman
+      - python3-cryptography
+      - bash-completion
+      - python3-libselinux
+      - policycoreutils-python-utils
+
+  - name: create rustdesk user
+    ansible.builtin.user:
+      name: rustdesk
+      uid: 989
+      system: true
+      home: /var/lib/rustdesk
+      shell: /bin/false
+
+  - name: create local data directory for rustdesk
+    ansible.builtin.file:
+      state: directory
+      path: /var/lib/rustdesk/data
+      owner: rustdesk
+      group: rustdesk
+      mode: 755
+
+  - name: set SELinux contexts for rustdesk directories
+    block:
+    - name:
+      community.general.sefcontext:
+        target: '/var/lib/rustdesk(/.+)?'
+        setype: user_home_dir_t
+        state: present
+    - name:
+      community.general.sefcontext:
+        target: '/var/lib/rustdesk/data(/.+)?'
+        setype: container_file_t
+        state: present
+    - name:
+      ansible.builtin.command: restorecon -irv /var/lib/rustdesk

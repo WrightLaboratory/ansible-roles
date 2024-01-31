@@ -1,0 +1,5 @@
+---
+rustdesk:
+  hosts:
+    $TARGET_FQDN:
+...
