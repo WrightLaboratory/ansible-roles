@@ -2,4 +2,7 @@
 rustdesk:
   hosts:
     $TARGET_FQDN:
+  vars:
+    service_name: rustdesk
+    service_uid: 989
 ...

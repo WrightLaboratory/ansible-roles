@@ -32,33 +32,38 @@
       - python3-libselinux
       - policycoreutils-python-utils
 
-  - name: create rustdesk user
+  - name: create user
     ansible.builtin.user:
-      name: rustdesk
-      uid: 989
+      name: "{{ vars.service_name }}"
+      uid: "{{ vars.service_uid | int }}"
       system: true
-      home: /var/lib/rustdesk
+      home: "/var/lib/{{ vars.service_name }}"
       shell: /bin/false
 
-  - name: create local data directory for rustdesk
+  - name: create local data directory for user
     ansible.builtin.file:
       state: directory
-      path: /var/lib/rustdesk/data
-      owner: rustdesk
-      group: rustdesk
+      path: "/var/lib/{{ vars.service_name }}/data"
+      owner: "{{ vars.service_name }}"
+      group: "{{ vars.service_name }}"
       mode: 755
 
-  - name: set SELinux contexts for rustdesk directories
+  - name: set SELinux contexts for user directories
     block:
     - name:
       community.general.sefcontext:
-        target: '/var/lib/rustdesk(/.+)?'
+        target: "/var/lib/{{ vars.service_name }}(/.+)?"
         setype: user_home_dir_t
         state: present
     - name:
       community.general.sefcontext:
-        target: '/var/lib/rustdesk/data(/.+)?'
+        target: "/var/lib/{{ vars.service_name }}/data(/.+)?"
         setype: container_file_t
         state: present
     - name:
-      ansible.builtin.command: restorecon -irv /var/lib/rustdesk
+      ansible.builtin.command: 
+        argv:
+        - restorecon
+        - -irv
+        - /var/lib/{{ vars.service_name }}
+      changed_when: false
