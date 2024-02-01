@@ -67,3 +67,11 @@
         - -irv
         - /var/lib/{{ vars.service_name }}
       changed_when: false
+
+  - name: ensure lingering enabled
+    ansible.builtin.command:
+      argv:
+      - loginctl
+      - enable-linger
+      - "{{ vars.service_name }}"
+      creates: /var/lib/systemd/linger/{{ vars.service_name }}
