@@ -46,7 +46,7 @@
       path: "/var/lib/{{ vars.service_name }}/data"
       owner: "{{ vars.service_name }}"
       group: "{{ vars.service_name }}"
-      mode: 755
+      mode: '0755'
 
   - name: set SELinux contexts for user directories
     block:
@@ -106,7 +106,7 @@
             - "{{ highest_subuid|int + 65536 }}-{{ highest_subuid|int + 65536 + 65536 -1 }}"
             - "{{ vars.service_name }}"
         when: subuid.stdout | trim | length > 0
-      when: "'vars.service_name:' not in subuid.stdout"
+      when: not subuid.stdout | regex_search(vars.service_name + ':')
 
     - name: add {{ vars.service_name }} user to {{ vars.subgid_file }}
       block:
@@ -126,4 +126,4 @@
             - "{{ highest_subgid|int + 65536 }}-{{ highest_subgid|int + 65536 + 65536 -1 }}"
             - "{{ vars.service_name }}"
           when: subgid.stdout | trim | length > 0
-      when: "'vars.service_name:' not in subgid.stdout"
+      when: not subgid.stdout | regex_search(vars.service_name + ':')
