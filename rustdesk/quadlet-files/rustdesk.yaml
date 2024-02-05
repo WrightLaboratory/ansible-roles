@@ -1,0 +1,65 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: rustdesk
+spec:
+  securityContext:
+    seLinuxOptions:
+      type: spc_t
+    capabilities:
+      drop:
+        - CAP_MKNOD
+        - CAP_NET_RAW
+        - CAP_AUDIT_WRITE
+
+  containers:
+    - name: hbbr
+      image: docker.io/rustdesk/rustdesk-server:latest
+      command: ["hbbr"]
+      ports:
+      - containerPort: 21117
+        hostPort: 21117
+        protocol: TCP
+      - containerPort: 21119
+        hostPort: 21119
+        protocol: TCP
+      volumeMounts:
+        - name: rustdesk-server-data-volume
+          mountPath: /root
+
+    - name: hbbs
+      command: ["hbbs"]
+      args: ["-r", "localhost:21117"]
+      image: docker.io/rustdesk/rustdesk-server:latest
+      ports:
+      - containerPort: 21115
+        hostPort: 21115
+        protocol: TCP
+      - containerPort: 21116
+        hostPort: 21116
+        protocol: TCP
+      - containerPort: 21116
+        hostPort: 21116
+        protocol: UDP
+      - containerPort: 21118
+        hostPort: 21118
+        protocol: TCP
+      volumeMounts:
+        - name: rustdesk-server-data-volume
+          mountPath: /root
+
+
+  #initContainers:
+  #  - name: wait-for-hbbr
+  #    image: docker.io/library/busybox
+  #    command: ["sh","-c"]
+  #    args: ["until echo 'Waiting for hbbr 21117...' && nc -vz -w 2 localhost 21117 && echo 'Waiting for hbbr 21119...' && nc -vz -w 2 localhost 21119; do echo 'Looping forever...'; sleep 2; done;"]
+
+
+  volumes:
+    - name: rustdesk-server-data-volume
+      hostPath:
+        path: /var/lib/rustdesk/data
+        type: Directory
+...

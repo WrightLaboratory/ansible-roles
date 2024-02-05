@@ -1,0 +1,23 @@
+[Install]
+WantedBy=default.target
+
+# [Unit]
+# Requires=rustdesk-hbbs.service
+# After=rustdesk-hbbs.service
+
+[Kube]
+# Point to the yaml file in the same directory
+Yaml=rustdesk.yaml
+
+# Use the rustdesk network
+Network=rustdesk.network
+
+# Publish the hbbr ports
+PublishPort=21117:21117/tcp
+PublishPort=21119:21119/tcp
+
+# Publish the hbbs ports
+PublishPort=21115:21115/tcp
+PublishPort=21116:21116/tcp
+PublishPort=21116:21116/udp
+PublishPort=21118:21118/tcp
