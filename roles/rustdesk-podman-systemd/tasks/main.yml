@@ -1,0 +1,30 @@
+---
+# tasks file for rustdesk
+
+- name: copy quadlet files
+  ansible.builtin.copy:
+    src: files/
+    dest: /var/lib/{{ vars.service_name }}/.config/containers/systemd
+    owner: "{{ vars.service_name }}"
+    group: "{{ vars.service_name }}"
+    mode: '0644'
+
+- name: Just force systemd to reread configs
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    scope: user
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ vars.service_uid }}"
+  become: true
+  become_user: "{{ vars.service_name }}"
+
+# TODO: Check why this does not work
+#- name: Run a user service when XDG_RUNTIME_DIR is not set on remote login
+#  ansible.builtin.systemd_service:
+#    name: rustdesk.service
+#    state: started
+#    scope: user
+#  environment:
+#    XDG_RUNTIME_DIR: "/run/user/{{ vars.service_uid }}"
+#  become: true
+#  become_user: "{{ vars.service_name }}"

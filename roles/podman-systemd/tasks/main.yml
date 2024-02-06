@@ -1,0 +1,97 @@
+---
+# tasks file for podman-systemd
+- name: create user
+  ansible.builtin.user:
+    name: "{{ vars.service_name }}"
+    uid: "{{ vars.service_uid | int }}"
+    system: true
+    home: "/var/lib/{{ vars.service_name }}"
+    shell: /bin/false
+
+- name: create local data directory for user
+  ansible.builtin.file:
+    state: directory
+    path: "/var/lib/{{ vars.service_name }}/data"
+    owner: "{{ vars.service_name }}"
+    group: "{{ vars.service_name }}"
+    mode: '0755'
+
+- name: set SELinux contexts for user directories
+  block:
+  - name:
+    community.general.sefcontext:
+      target: "/var/lib/{{ vars.service_name }}(/.+)?"
+      setype: user_home_dir_t
+      state: present
+  - name:
+    community.general.sefcontext:
+      target: "/var/lib/{{ vars.service_name }}/data(/.+)?"
+      setype: container_file_t
+      state: present
+  - name:
+    ansible.builtin.command: 
+      argv:
+      - restorecon
+      - -irv
+      - /var/lib/{{ vars.service_name }}
+    changed_when: false
+
+- name: ensure lingering enabled
+  ansible.builtin.command:
+    argv:
+    - loginctl
+    - enable-linger
+    - "{{ vars.service_name }}"
+    creates: /var/lib/systemd/linger/{{ vars.service_name }}
+
+- name: add subuid/subgid entries for {{ vars.service_name }}
+  block:
+
+  - name: get {{ vars.subuid_file }} contents
+    ansible.builtin.command: cat {{ vars.subuid_file }}
+    register: subuid
+    changed_when: false
+  - name: get {{ vars.subgid_file }} contents
+    ansible.builtin.command: cat {{ vars.subgid_file }}
+    register: subgid
+    changed_when: false
+
+  - name: add {{ vars.service_name }} user to {{ vars.subuid_file }}
+    block:
+    - name: add {{ vars.service_name }} as first user to {{ vars.subuid_file }}
+      ansible.builtin.command: usermod -v 100000-165535 {{ vars.service_name }}
+      when: subuid.stdout | trim | length == 0
+    - name: add {{ vars.service_name }} as next user to {{ vars.subuid_file }}
+      block:
+      - name: get highest current value of subuid
+        ansible.builtin.set_fact:
+          highest_subuid: "{{ subuid.stdout_lines[-1].split(':')[1] }}"
+      - name: add {{ vars.service_name }} to list of users in {{ vars.subuid_file }}
+        ansible.builtin.command:
+          argv:
+          - usermod
+          - -v
+          - "{{ highest_subuid|int + 65536 }}-{{ highest_subuid|int + 65536 + 65536 -1 }}"
+          - "{{ vars.service_name }}"
+      when: subuid.stdout | trim | length > 0
+    when: not subuid.stdout | regex_search(vars.service_name + ':')
+
+  - name: add {{ vars.service_name }} user to {{ vars.subgid_file }}
+    block:
+    - name: add {{ vars.service_name }} as first user to {{ vars.subgid_file }}
+      ansible.builtin.command: usermod -w 100000-165535 {{ vars.service_name }}
+      when: subgid.stdout | trim | length == 0
+    - name: add {{ vars.service_name }} as next user to {{ vars.subgid_file }}
+      block:
+      - name: get highest current value of subgid
+        ansible.builtin.set_fact:
+          highest_subgid: "{{ subgid.stdout_lines[-1].split(':')[1] }}"
+      - name: add {{ vars.service_name }} to list of users in {{ vars.subgid_file }}
+        ansible.builtin.command:
+          argv:
+          - usermod
+          - -w
+          - "{{ highest_subgid|int + 65536 }}-{{ highest_subgid|int + 65536 + 65536 -1 }}"
+          - "{{ vars.service_name }}"
+        when: subgid.stdout | trim | length > 0
+    when: not subgid.stdout | regex_search(vars.service_name + ':')
