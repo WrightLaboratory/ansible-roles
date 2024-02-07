@@ -40,7 +40,7 @@
     ansible.builtin.command: 
       argv:
       - restorecon
-      - -irv
+      - -rv
       - /var/lib/{{ vars.service_name }}
     changed_when: false
 
@@ -103,3 +103,47 @@
           - "{{ vars.service_name }}"
         when: subgid.stdout | trim | length > 0
     when: not subgid.stdout | regex_search(vars.service_name + ':')
+
+- name: initialize podman .local/share/containers for {{ vars.service_name }}
+  become_user: "{{ vars.service_name }}"
+  block:
+  - name: start busybox container
+    containers.podman.podman_container:
+      name: busybox
+      image: busybox
+      state: started
+      user: 0:0
+      detach: true
+      interactive: true
+      tty: true
+      volumes: 
+      - /var/lib/{{ vars.service_name }}/data:/data:z
+  - name: execute command in busybox container
+    containers.podman.podman_container_exec:
+      name: busybox
+      command: sh -c 'echo -n "In this container, I am ";id -un'
+    register: container_out
+  - name: print out command results
+    ansible.builtin.debug:
+      msg: "{{ container_out.stdout }}"
+  - name: remove container
+    containers.podman.podman_container:
+      name: busybox
+      state: absent
+
+- name: reset context for storage
+  # https://github.com/containers/podman/issues/3234
+  # https://github.com/containers/podman/issues/18780
+  block:
+  - name: clone contexts
+    community.general.sefcontext:
+      target: /var/lib/{{ vars.service_name }}/.local/share/containers/storage
+      equal: /var/lib/containers/storage
+      state: present
+  - name: restore and apply labels
+    ansible.builtin.command: 
+      argv:
+      - restorecon
+      - -Rv
+      - /var/lib/{{ vars.service_name }}/.local/share/containers/storage
+    changed_when: false
