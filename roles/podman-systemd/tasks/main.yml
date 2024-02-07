@@ -18,17 +18,17 @@
 
 - name: set SELinux contexts for user directories
   block:
-  - name:
+  - name: set context for system account home dir
     community.general.sefcontext:
       target: "/var/lib/{{ vars.service_name }}(/.+)?"
       setype: user_home_dir_t
       state: present
-  - name:
+  - name: set context for system account home data dir
     community.general.sefcontext:
       target: "/var/lib/{{ vars.service_name }}/data(/.+)?"
       setype: container_file_t
       state: present
-  - name:
+  - name: restore and apply labels
     ansible.builtin.command: 
       argv:
       - restorecon
