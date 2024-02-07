@@ -16,6 +16,14 @@
     group: "{{ vars.service_name }}"
     mode: '0755'
 
+- name: create ansible temp directory
+  ansible.builtin.file:
+    state: directory
+    path: /var/lib/{{ vars.service_name }}/.ansible/tmp
+    owner: "{{ vars.service_name }}"
+    group: "{{ vars.service_name }}"
+    mode: '0700'
+
 - name: set SELinux contexts for user directories
   block:
   - name: set context for system account home dir
