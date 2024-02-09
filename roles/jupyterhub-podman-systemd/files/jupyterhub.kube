@@ -1,0 +1,13 @@
+[Install]
+WantedBy=default.target
+
+[Kube]
+# Point to the yaml file in the same directory
+Yaml=jupyterhub.yaml
+
+# Use the jupyterhub network
+Network=jupyterhub.network
+
+# Publish the jupyterhub ports
+PublishPort=8000:8000/tcp
+

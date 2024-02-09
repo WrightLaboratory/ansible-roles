@@ -1,0 +1,16 @@
+---
+- hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: true
+  become: true
+  vars:
+    service_name: jupyterhub
+    service_uid: 978
+    subuid_file: /etc/subuid
+    subgid_file: /etc/subgid
+    jupyterhub_version: 4.0.2
+    datascience_notebook_image_version: 2023-12-04
+  roles:
+  - base-os
+  #- nginx-reverse-proxy-selfsigned
+  - podman-systemd
+  - jupyterhub-podman-systemd

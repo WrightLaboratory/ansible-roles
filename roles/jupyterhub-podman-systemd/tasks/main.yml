@@ -1,0 +1,73 @@
+---
+# tasks file for jupyterhub-podman-systemd
+
+- name: copy files
+  ansible.builtin.copy:
+    src: files/
+    dest: /var/lib/{{ vars.service_name }}/.config/containers/systemd
+    owner: "{{ vars.service_name }}"
+    group: "{{ vars.service_name }}"
+    mode: '0600'
+
+- name: create jupyterhub k8s yaml
+  ansible.builtin.template:
+    src: templates/jupyterhub.yaml.j2
+    dest: /var/lib/{{ vars.service_name }}/.config/containers/systemd/jupyterhub.yaml
+    owner: "{{ vars.service_name }}"
+    group: "{{ vars.service_name }}"
+    mode: '0600'
+
+#- name: create secrets k8s yaml
+#  ansible.builtin.template:
+#    src: templates/secrets.yaml.j2
+#    dest: /var/lib/{{ vars.service_name }}/.config/containers/systemd/secrets.yaml
+#    owner: "{{ vars.service_name }}"
+#    group: "{{ vars.service_name }}"
+#    mode: '0600'
+
+- name: create local data directory for postgres
+  ansible.builtin.file:
+    state: directory
+    path: "/var/lib/{{ vars.service_name }}/data/postgres"
+    owner: "{{ vars.service_name }}"
+    group: "{{ vars.service_name }}"
+    mode: '0700'
+
+- name: create local data directory for jupyterhub
+  ansible.builtin.file:
+    state: directory
+    path: "/var/lib/{{ vars.service_name }}/data/jupyterhub"
+    owner: "{{ vars.service_name }}"
+    group: "{{ vars.service_name }}"
+    mode: '0700'
+
+- name: build local jupyterhub image
+  containers.podman.podman_image:
+    name: localhost/jupyterhub
+    tag: latest
+    path: /var/lib/{{ vars.service_name }}/.config/containers/systemd/jupyterhub
+    build:
+      extra_args: --build-arg JUPYTERHUB_VERSION={{ vars.jupyterhub_version }}
+  become: true
+  become_user: "{{ vars.service_name }}"
+
+- name: build local jupyternotebook datascience image
+  containers.podman.podman_image:
+    name: localhost/datascience-notebook
+    tag: latest
+    path: /var/lib/{{ vars.service_name }}/.config/containers/systemd/jupyternotebook
+    build:
+      format: docker
+      extra_args: --build-arg JUPYTERHUB_VERSION={{ vars.jupyterhub_version }}
+        --build-arg DOCKER_DATASCIENCE_NOTEBOOK_IMAGE_VERSION={{ vars.datascience_notebook_image_version }}
+  become: true
+  become_user: "{{ vars.service_name }}"
+
+- name: just force systemd to reread configs
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    scope: user
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ vars.service_uid }}"
+  become: true
+  become_user: "{{ vars.service_name }}"
