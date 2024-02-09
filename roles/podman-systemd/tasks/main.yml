@@ -14,7 +14,7 @@
     path: "/var/lib/{{ vars.service_name }}/data"
     owner: "{{ vars.service_name }}"
     group: "{{ vars.service_name }}"
-    mode: '0755'
+    mode: '0700'
 
 - name: create ansible temp directory
   ansible.builtin.file:
@@ -103,6 +103,17 @@
           - "{{ vars.service_name }}"
         when: subgid.stdout | trim | length > 0
     when: not subgid.stdout | regex_search(vars.service_name + ':')
+
+- name: enbable podman socket
+  ansible.builtin.systemd_service:
+    name: podman.socket
+    state: started
+    enabled: true
+    scope: user
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ vars.service_uid }}"
+  become: true
+  become_user: "{{ vars.service_name }}"  
 
 - name: initialize podman .local/share/containers for {{ vars.service_name }}
   become_user: "{{ vars.service_name }}"
