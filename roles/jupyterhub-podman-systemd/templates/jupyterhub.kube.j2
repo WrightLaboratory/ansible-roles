@@ -9,5 +9,4 @@ Yaml=jupyterhub.yaml
 Network=jupyterhub.network
 
 # Publish the jupyterhub ports
-PublishPort=8000:8000/tcp
-
+PublishPort={{ service_port }}:{{ service_port }}/{{ service_protocol }}

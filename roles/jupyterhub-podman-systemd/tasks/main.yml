@@ -17,6 +17,14 @@
     group: "{{ vars.service_name }}"
     mode: '0600'
 
+- name: create jupyterhub quadlet kube file
+  ansible.builtin.template:
+    src: templates/jupyterhub.kube.j2
+    dest: /var/lib/{{ vars.service_name }}/.config/containers/systemd/jupyterhub.kube
+    owner: "{{ vars.service_name }}"
+    group: "{{ vars.service_name }}"
+    mode: '0600'
+
 #- name: create secrets k8s yaml
 #  ansible.builtin.template:
 #    src: templates/secrets.yaml.j2
@@ -66,6 +74,16 @@
 - name: just force systemd to reread configs
   ansible.builtin.systemd_service:
     daemon_reload: true
+    scope: user
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ vars.service_uid }}"
+  become: true
+  become_user: "{{ vars.service_name }}"
+
+- name: Run a user service when XDG_RUNTIME_DIR is not set on remote login
+  ansible.builtin.systemd_service:
+    name: "{{ vars.service_name }}.service"
+    state: started
     scope: user
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ vars.service_uid }}"

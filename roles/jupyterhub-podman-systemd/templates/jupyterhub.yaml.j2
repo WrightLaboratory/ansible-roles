@@ -91,9 +91,9 @@ spec:
         - name: DOCKER_NOTEBOOK_IMAGE
           value: localhost/datascience-notebook:latest
       ports:
-      - containerPort: 8000
-        hostPort: 8000
-        protocol: TCP
+      - containerPort: {{ service_port }}
+        hostPort: {{ service_port }}
+        protocol: {{ service_protocol }}
       volumeMounts:
         - name: project-podman-jupyterhub-data-volume
           mountPath: /data

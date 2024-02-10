@@ -5,6 +5,9 @@
   vars:
     service_name: jupyterhub
     service_uid: 978
+    service_port: 8000
+    service_protocol: tcp
+    service_domain_name:
     subuid_file: /etc/subuid
     subgid_file: /etc/subgid
     jupyterhub_version: 4.0.2
