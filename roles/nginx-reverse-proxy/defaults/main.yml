@@ -1,0 +1,8 @@
+---
+# defaults file for nginx-reverse-proxy
+nginx_reverse_proxy: true
+nginx_cert_root: /etc/pki/tls/certs
+nginx_key_root: /etc/pki/tls/private
+
+nginx_reverse_proxy_app: apache
+nginx_reverse_proxy_app_listen_port: 8080

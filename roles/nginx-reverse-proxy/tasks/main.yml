@@ -1,0 +1,111 @@
+---
+# tasks file for nginx-reverse-proxy
+
+- name: install nginx
+  ansible.builtin.package:
+      name: nginx
+
+- name: create static web content directory
+  ansible.builtin.file:
+      path: /var/www/html
+      state: directory
+      recurse: true
+      owner: nginx
+      
+- name: set service_domain_name variable
+  ansible.builtin.set_fact:
+    service_domain_name: "{{ service_domain_name | default(inventory_hostname) }}"
+
+- name: create static web content directory for {{ service_domain_name }}
+  ansible.builtin.file:
+      path: /var/www/{{ service_domain_name }}/html
+      state: directory
+      recurse: true
+      owner: nginx
+      group: nginx
+
+- name: install static index.html
+  ansible.builtin.template:
+    src: templates/index.html.j2
+    dest: /var/www/{{ service_domain_name }}/html/index.html
+    owner: nginx
+    group: nginx
+
+- name: restore and apply labels to web root
+  ansible.builtin.command: 
+    argv:
+    - restorecon
+    - -rv
+    - /var/www
+  changed_when: false
+
+- name: generate Diffie-Hellman parameters with the default size (4096 bits)
+  community.crypto.openssl_dhparam:
+    path: /etc/ssl/dhparams.pem
+
+- name: create nginx ssl configuration snippet directory
+  ansible.builtin.file:
+    name: /etc/nginx/snippets
+    recurse: true
+    state: directory
+    owner: root
+    group: root
+
+- name: create nginx ssl configuration snippet
+  ansible.builtin.template:
+    src: templates/ssl_snippet_modern.j2
+    dest: /etc/nginx/snippets/ssl
+    owner: root
+    group: root
+
+- name: install certificate
+  ansible.builtin.copy:
+    src: ./files/{{ service_domain_name }}.crt.pem
+    dest:  "{{ nginx_cert_root }}/{{ service_domain_name }}.crt.pem"
+    owner: root
+    group: root
+
+- name: install key
+  ansible.builtin.copy:
+    src: ./files/{{ service_domain_name }}.key.pem
+    dest: "{{ nginx_key_root }}/{{ service_domain_name }}.key.pem"
+    owner: root
+    group: root
+
+
+- name: enable as nginx reverse proxy
+  block:
+  - name: informational
+    ansible.builtin.debug:
+      msg: "host will be configured as a reverse proxy"
+  - name: install {{ service_domain_name }} nginx reverse proxy for {{ nginx_reverse_proxy_app }} configuration
+    ansible.builtin.template:
+      src: ./templates/05_reverse_proxy_app.conf.j2
+      dest: /etc/nginx/conf.d/05-reverse-proxy-{{ nginx_reverse_proxy_app }}.conf
+      owner: root
+      group: root
+  - name: enable nginx to act as proxy in SELinux
+    ansible.posix.seboolean:
+      name: httpd_can_network_connect
+      state: true
+      persistent: true
+  when: nginx_reverse_proxy
+
+- name: enable web server serving only index.html
+  block:
+  - name: informational
+    ansible.builtin.debug:
+      msg: "host will be configured as a web server only"
+  - name: install {{ service_domain_name }}-https-nginx.conf
+    ansible.builtin.template:
+      src: ./templates/fqdn_nginx_https.conf.j2
+      dest: /etc/nginx/conf.d/{{ service_domain_name }}-https-nginx.conf
+      owner: root
+      group: root
+  when: not nginx_reverse_proxy
+
+- name: start nginx service
+  ansible.builtin.service:
+    name: nginx
+    enabled: true
+    state: started
