@@ -5,8 +5,6 @@
   vars:
     service_name: rustdesk
     service_uid: 989
-    subuid_file: /etc/subuid
-    subgid_file: /etc/subgid
   roles:
   - base-os
   - podman-systemd

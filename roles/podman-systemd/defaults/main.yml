@@ -1,2 +1,5 @@
 ---
 # defaults file for podman-systemd
+
+subuid_file: /etc/subuid
+subgid_file: /etc/subgid

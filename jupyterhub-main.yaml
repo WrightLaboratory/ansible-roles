@@ -9,8 +9,6 @@
     service_uid: 978
     service_port: 8000
     service_protocol: tcp
-    subuid_file: /etc/subuid
-    subgid_file: /etc/subgid
     jupyterhub_version: 4.0.2
     datascience_notebook_image_version: 2023-12-04
   roles:
