@@ -1,4 +1,4 @@
-# Instructions for Running `jupyterhub-main.yaml` Playbook
+# Instructions for Running `jupyterhub-main.yml` Playbook
 
 ## Setting Up Control Node to Create jupyterhub
 
@@ -18,7 +18,7 @@ tar -xvf ${TARGET_FQDN}.gz -C ./roles/nginx-reverse-proxy/files
 ### Generate Jupyterhub Secrets
 
 ```bash
-ansible-playbook -i localhost, --connection local jupyterhub-ansible-secrets-generate.yaml
+ansible-playbook -i localhost, --connection local jupyterhub-ansible-secrets-generate.yml
 ```
 
 Answer the prompts
@@ -26,10 +26,10 @@ Answer the prompts
 Use `vi` to edit  `${HOME}/.ansible/vaultpassword` and replace the line with your plaintext password.
 (Be sure not to add a new line.)
 
-Encrypt resulting the `${HOME}/.ansible/jupyterhub-secrets.yaml` file
+Encrypt resulting the `${HOME}/.ansible/jupyterhub-secrets.yml` file
 
 ```bash
-ansible-vault encrypt --vault-id $(id -un)@${HOME}/.ansible/vaultpassword ${HOME}/.ansible/jupyterhub-secrets.yaml
+ansible-vault encrypt --vault-id $(id -un)@${HOME}/.ansible/vaultpassword ${HOME}/.ansible/jupyterhub-secrets.yml
 ```
 
 ### Create Jupyterhub
@@ -37,7 +37,7 @@ ansible-vault encrypt --vault-id $(id -un)@${HOME}/.ansible/vaultpassword ${HOME
 ```bash
 ansible-playbook --user="${TARGET_USER}" \
     --vault-id "$(id -un)@${HOME}/.ansible/vaultpassword" \
-    -e "@${HOME}/.ansible/jupyterhub-secrets.yaml" \
+    -e "@${HOME}/.ansible/jupyterhub-secrets.yml" \
     -i "${TARGET_FQDN}", \
-    "jupyterhub-main.yaml"
+    "jupyterhub-main.yml"
  ```
