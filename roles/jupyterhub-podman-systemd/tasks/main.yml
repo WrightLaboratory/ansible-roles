@@ -17,22 +17,6 @@
     group: "{{ vars.service_name }}"
     mode: '0600'
 
-- name: create jupyterhub quadlet kube file
-  ansible.builtin.template:
-    src: templates/jupyterhub.kube.j2
-    dest: /var/lib/{{ vars.service_name }}/.config/containers/systemd/jupyterhub.kube
-    owner: "{{ vars.service_name }}"
-    group: "{{ vars.service_name }}"
-    mode: '0600'
-
-#- name: create secrets k8s yaml
-#  ansible.builtin.template:
-#    src: templates/secrets.yaml.j2
-#    dest: /var/lib/{{ vars.service_name }}/.config/containers/systemd/secrets.yaml
-#    owner: "{{ vars.service_name }}"
-#    group: "{{ vars.service_name }}"
-#    mode: '0600'
-
 - name: create local data directory for postgres
   ansible.builtin.file:
     state: directory

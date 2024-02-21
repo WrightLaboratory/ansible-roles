@@ -1,2 +1,5 @@
 ---
 # defaults file for jupyterhub-podman-systemd
+
+jupyterhub_version: 4.0.2
+datascience_notebook_image_version: 2023-12-04
