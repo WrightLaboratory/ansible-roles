@@ -1,2 +1,5 @@
 ---
 # defaults file for mediawiki-podman-systemd
+
+mysql_version: 5.7
+mediawiki_version: 1.41.0
