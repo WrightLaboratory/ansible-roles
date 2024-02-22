@@ -1,6 +1,14 @@
 ---
 # tasks file for jupyterhub-podman-systemd
 
+- name: create directory for quadlet files
+  ansible.builtin.file:
+    state: directory
+    path: /var/lib/{{ vars.service_name }}/.config/containers/systemd
+    owner: "{{ vars.service_name }}"
+    group: "{{ vars.service_name }}"
+    mode: '0700'
+    
 - name: copy files
   ansible.builtin.copy:
     src: files/
