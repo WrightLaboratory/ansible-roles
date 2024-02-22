@@ -1,0 +1,12 @@
+[Install]
+WantedBy=default.target
+
+[Kube]
+# Point to the yaml file in the same directory
+Yaml=mediawiki.yaml
+
+# Use the mediawiki network
+Network=mediawiki.network
+
+# Publish the mediawiki ports
+PublishPort=8080:80/tcp

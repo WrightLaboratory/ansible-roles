@@ -1,0 +1,14 @@
+---
+- hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: true
+  become: true
+  vars:
+    nginx_reverse_proxy_app: mediawiki
+    nginx_reverse_proxy_app_listen_port: 80
+    service_name: mediawiki
+    service_uid: 967
+  roles:
+  - base-os
+  - podman-systemd
+  - mediawiki-podman-systemd
+  #- nginx-reverse-proxy
