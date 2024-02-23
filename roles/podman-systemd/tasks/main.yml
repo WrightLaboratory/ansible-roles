@@ -115,6 +115,23 @@
   become: true
   become_user: "{{ vars.sysacct_name }}"  
 
+- name: configure sefcontexts on new container storage location inside system account homedir
+  # https://github.com/containers/podman/issues/3234
+  # https://github.com/containers/podman/issues/18780
+  block:
+  - name: clone sefcontexts
+    community.general.sefcontext:
+      target: /var/lib/{{ vars.sysacct_name }}/.local/share/containers/storage
+      equal: /var/lib/containers/storage
+      state: present
+  - name: restore and apply labels
+    ansible.builtin.command: 
+      argv:
+      - restorecon
+      - -iRv
+      - /var/lib/{{ vars.sysacct_name }}/.local/share/containers/storage
+    changed_when: false
+
 - name: initialize podman .local/share/containers for {{ vars.sysacct_name }}
   become_user: "{{ vars.sysacct_name }}"
   block:
@@ -141,20 +158,3 @@
     containers.podman.podman_container:
       name: busybox
       state: absent
-
-- name: reset context for storage
-  # https://github.com/containers/podman/issues/3234
-  # https://github.com/containers/podman/issues/18780
-  block:
-  - name: clone contexts
-    community.general.sefcontext:
-      target: /var/lib/{{ vars.sysacct_name }}/.local/share/containers/storage
-      equal: /var/lib/containers/storage
-      state: present
-  - name: restore and apply labels
-    ansible.builtin.command: 
-      argv:
-      - restorecon
-      - -iRv
-      - /var/lib/{{ vars.sysacct_name }}/.local/share/containers/storage
-    changed_when: false
