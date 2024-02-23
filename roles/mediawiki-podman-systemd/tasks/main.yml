@@ -4,57 +4,57 @@
 - name: create directory for quadlet files
   ansible.builtin.file:
     state: directory
-    path: /var/lib/{{ vars.service_name }}/.config/containers/systemd
-    owner: "{{ vars.service_name }}"
-    group: "{{ vars.service_name }}"
+    path: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
     mode: '0700'
 
 - name: copy quadlet files
   ansible.builtin.copy:
     src: files/
-    dest: /var/lib/{{ vars.service_name }}/.config/containers/systemd
-    owner: "{{ vars.service_name }}"
-    group: "{{ vars.service_name }}"
+    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
     mode: '0600'
 
 - name: create mediawiki k8s yaml
   ansible.builtin.template:
     src: templates/mediawiki.yaml.j2
-    dest: /var/lib/{{ vars.service_name }}/.config/containers/systemd/mediawiki.yaml
-    owner: "{{ vars.service_name }}"
-    group: "{{ vars.service_name }}"
+    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/mediawiki.yaml
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
     mode: '0600'
     
 - name: create local data directory for mysql
   ansible.builtin.file:
     state: directory
-    path: /var/lib/{{ vars.service_name }}/data/db
-    owner: "{{ vars.service_name }}"
-    group: "{{ vars.service_name }}"
+    path: /var/lib/{{ vars.sysacct_name }}/data/db
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
     mode: '0700'
 
 - name: create local data directory for mysql init
   ansible.builtin.file:
     state: directory
-    path: /var/lib/{{ vars.service_name }}/data/docker-entrypoint-initdb.d
-    owner: "{{ vars.service_name }}"
-    group: "{{ vars.service_name }}"
+    path: /var/lib/{{ vars.sysacct_name }}/data/docker-entrypoint-initdb.d
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
     mode: '0700'
 
 - name: create sql init file
   ansible.builtin.template:
     src: templates/00_init_mediawiki_db.sql.j2
-    dest: /var/lib/{{ vars.service_name }}/data/docker-entrypoint-initdb.d/00_init_mediawiki_db.sql
-    owner: "{{ vars.service_name }}"
-    group: "{{ vars.service_name }}"
+    dest: /var/lib/{{ vars.sysacct_name }}/data/docker-entrypoint-initdb.d/00_init_mediawiki_db.sql
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
     mode: '0600'
 
 - name: create local data directory for mediawiki
   ansible.builtin.file:
     state: directory
-    path: "/var/lib/{{ vars.service_name }}/data/w"
-    owner: "{{ vars.service_name }}"
-    group: "{{ vars.service_name }}"
+    path: "/var/lib/{{ vars.sysacct_name }}/data/w"
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
     mode: '0700'
 
 - name: just force systemd to reread configs
@@ -62,16 +62,16 @@
     daemon_reload: true
     scope: user
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ vars.service_uid }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
   become: true
-  become_user: "{{ vars.service_name }}"
+  become_user: "{{ vars.sysacct_name }}"
 
 - name: Run a user service when XDG_RUNTIME_DIR is not set on remote login
   ansible.builtin.systemd_service:
-    name: "{{ vars.service_name }}.service"
+    name: "{{ service_name }}.service"
     state: started
     scope: user
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ vars.service_uid }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
   become: true
-  become_user: "{{ vars.service_name }}"
+  become_user: "{{ vars.sysacct_name }}"

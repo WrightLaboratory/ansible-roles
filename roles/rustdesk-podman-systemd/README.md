@@ -43,16 +43,16 @@ Appendix: Checking if service is working
 Switch to system cuser account
 
 ```bash
-service_name="{{ name_of_service }}"
-sudo -H -u "${service_name}" bash -c 'cd; bash'
+sysacct_name="{{ name_of_service }}"
+sudo -H -u "${sysacct_name}" bash -c 'cd; bash'
 ```
 
 Enable use of `systemctl --user` once inside Bash shell running as service account.
 
 ```bash
-service_name="{{ name_of_service }}"
+sysacct_name="{{ name_of_service }}"
 
 export XDG_RUNTIME_DIR=/run/user/"$(id -u)"
 
-systemctl --user status "${service_name}.service"
+systemctl --user status "${sysacct_name}.service"
 ```

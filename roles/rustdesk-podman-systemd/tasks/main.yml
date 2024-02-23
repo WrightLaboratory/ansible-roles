@@ -4,9 +4,9 @@
 - name: copy quadlet files
   ansible.builtin.copy:
     src: files/
-    dest: /var/lib/{{ vars.service_name }}/.config/containers/systemd
-    owner: "{{ vars.service_name }}"
-    group: "{{ vars.service_name }}"
+    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
     mode: '0644'
 
 - name: Just force systemd to reread configs
@@ -14,9 +14,9 @@
     daemon_reload: true
     scope: user
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ vars.service_uid }}"
+    XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
   become: true
-  become_user: "{{ vars.service_name }}"
+  become_user: "{{ vars.sysacct_name }}"
 
 # TODO: Check why this does not work
 #- name: Run a user service when XDG_RUNTIME_DIR is not set on remote login
@@ -25,6 +25,6 @@
 #    state: started
 #    scope: user
 #  environment:
-#    XDG_RUNTIME_DIR: "/run/user/{{ vars.service_uid }}"
+#    XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
 #  become: true
-#  become_user: "{{ vars.service_name }}"
+#  become_user: "{{ vars.sysacct_name }}"

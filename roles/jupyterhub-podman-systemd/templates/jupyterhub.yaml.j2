@@ -115,13 +115,13 @@ spec:
   volumes:
     - name: project-podman-jupyterhub-db-volume
       hostPath:
-        path: /var/lib/{{ vars.service_name }}/data/postgres
+        path: /var/lib/{{ vars.sysacct_name }}/data/postgres
         type: Directory
     - name: project-podman-jupyterhub-data-volume
       hostPath:
-        path: /var/lib/{{ vars.service_name }}/data/jupyterhub
+        path: /var/lib/{{ vars.sysacct_name }}/data/jupyterhub
         type: Directory
     - name: podman-socket-volume
       hostPath:
-        path: /run/user/{{ vars.service_uid }}/podman
+        path: /run/user/{{ vars.sysacct_uid }}/podman
         type: Directory

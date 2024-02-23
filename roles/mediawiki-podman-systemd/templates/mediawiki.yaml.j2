@@ -64,17 +64,17 @@ spec:
   volumes:
     - name: mediawiki-db-volume
       hostPath:
-        path: /var/lib/{{ vars.service_name }}/data/db
+        path: /var/lib/{{ vars.sysacct_name }}/data/db
         type: Directory
     - name: mediawiki-db-init-volume
       hostPath:
-        path: /var/lib/{{ vars.service_name }}/data/docker-entrypoint-initdb.d
+        path: /var/lib/{{ vars.sysacct_name }}/data/docker-entrypoint-initdb.d
         type: Directory
     - name: mediawiki-data-volume
       hostPath:
-        path: /var/lib/{{ vars.service_name }}/data/w
+        path: /var/lib/{{ vars.sysacct_name }}/data/w
         type: Directory
     - name: podman-socket-volume
       hostPath:
-        path: /run/user/{{ vars.service_uid }}/podman
+        path: /run/user/{{ vars.sysacct_uid }}/podman
         type: Directory

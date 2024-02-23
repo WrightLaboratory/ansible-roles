@@ -3,8 +3,8 @@
   gather_facts: true
   become: true
   vars:
-    service_name: rustdesk
-    service_uid: 989
+    sysacct_name: rustdesk
+    sysacct_uid: 989
   roles:
   - base-os
   - podman-systemd
