@@ -12,6 +12,100 @@
   changed_when: false
   register: almalinux_version
 
+# see the following:
+# - https://web.archive.org/web/20230621132602/https://github.com/containers/podman/issues/11632
+# - https://web.archive.org/web/20240110052700/https://bugzilla.redhat.com/show_bug.cgi?id=1897579
+# - https://web.archive.org/web/20231010132459/https://unix.stackexchange.com/questions/624428/cgroups-v2-cgroup-controllers-not-delegated-to-non-privileged-users-on-centos-s/625079
+- name: get cgroup v2 status
+  block:
+  - name: execute grubby
+    ansible.builtin.shell:
+      cmd: |
+        grubby --info="$(grubby --default-kernel)" \
+          | grep -c "systemd\.unified_cgroup_hierarchy=1" \
+          | cat
+    register: grubby_results
+    changed_when: false
+  - name: set cgroup v2 status
+    ansible.builtin.set_fact:
+      cgroupv2_enabled: "{{ grubby_results.stdout | bool }}"
+
+- name: hacks to AlmaLinux/RHEL 8 for cgroup v2 support
+  block:
+  - name: enable cgroup v2 option in the kernel
+    ansible.builtin.shell:
+      cmd: |
+        updated=0
+        grubby --info="$(grubby --default-kernel)" \
+          | grep ^args  \
+          | grep -q systemd\.unified_cgroup_hierarchy \
+          || { grubby --args="systemd.unified_cgroup_hierarchy=1" --update-kernel=ALL && updated=1; }
+          [[ "$updated" -eq 1 ]] && echo "kernel-cmdline-updated"
+        exit 0
+    register: grubby_output
+    changed_when: '"kernel-cmdline-updated" in grubby_output.stdout'
+  - name: create /etc/systemd/system/user@.service.d
+    ansible.builtin.file:
+      path: /etc/systemd/system/user@.service.d
+      state: directory
+      owner: root
+      group: root
+      mode: 0755
+  - name: create /etc/systemd/system/user-.slice.d
+    ansible.builtin.file:
+      path: /etc/systemd/system/user-.slice.d
+      state: directory
+      owner: root
+      group: root
+      mode: 0755
+  - name: create unit file to enable user slices
+    ansible.builtin.copy:
+      content: |
+        [Unit]
+        Before=systemd-logind.service
+        [Slice]
+        Slice=user.slice
+        [Install]
+        WantedBy=multi-user.target
+      dest: /etc/systemd/system/user-0.slice
+      owner: root
+      group: root
+      mode: 0644
+  - name: create required delegations in user slice
+    ansible.builtin.copy:
+      content: |
+        [Service]
+        Delegate=cpu cpuset io memory pids
+      dest: /etc/systemd/system/user@.service.d/delegate.conf
+      owner: root
+      group: root
+      mode: 0644
+  - name: config user slice override
+    ansible.builtin.copy:
+      content: |
+        [Slice]
+        CPUAccounting=yes
+        MemoryAccounting=yes
+        IOAccounting=yes
+        TasksAccounting=yes
+      dest: /etc/systemd/system/user-.slice.d/override.conf
+      owner: root
+      group: root
+      mode: 0644
+  - name: reload systemd units
+    ansible.builtin.systemd_service:
+      daemon_reload: true
+      scope: system
+  - name: reboot
+    ansible.builtin.reboot:
+      reboot_timeout: 1200
+  - name: wait for system readiness
+    ansible.builtin.wait_for_connection:
+  when:
+  - almalinux_version.stdout is version("8.0", '>=')
+  - almalinux_version.stdout is version("9.0", '<')
+  - not cgroupv2_enabled
+
 - name: check dnf packages to upgrade
   ansible.builtin.dnf:
     list: updates
