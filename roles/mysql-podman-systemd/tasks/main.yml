@@ -1,0 +1,105 @@
+---
+# tasks file for mysql-podman-systemd
+
+- name: create mysql container secrets
+  become_user: "{{ vars.sysacct_name }}"
+  block:
+  - name: create mysql_root_password secret
+    containers.podman.podman_secret:
+      name: mysql_root_password-secret-container
+      data: "{{ mysql_root_password }}"
+      state: present
+      force: true
+  - name: create mysql_database secret
+    containers.podman.podman_secret:
+      name: mysql_database-secret-container
+      data: "{{ mysql_database }}"
+      state: present
+      force: true
+  - name: create mysql_user secret
+    containers.podman.podman_secret:
+      name: mysql_user-secret-container
+      data: "{{ mysql_user }}"
+      state: present
+      force: true
+  - name: create mysql_password secret
+    containers.podman.podman_secret:
+      name: mysql_password-secret-container
+      data: "{{ mysql_password }}"
+      state: present
+      force: true
+
+- name: create directory for quadlet files
+  ansible.builtin.file:
+    state: directory
+    path: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0700'
+
+- name: copy quadlet files
+  ansible.builtin.copy:
+    src: files/
+    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0600'
+
+- name: create pod network unit
+  ansible.builtin.template:
+    src: templates/pod.network.j2
+    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/{{ pod_name }}.network
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0700'
+
+- name: create mysql container unit
+  ansible.builtin.template:
+    src: templates/mysql.container.j2
+    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/mysql.container
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0700'
+
+- name: create local data directory for mysql database
+  ansible.builtin.file:
+    state: directory
+    path: /var/lib/{{ vars.sysacct_name }}/data/db
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0750'
+
+#- name: create local data directory for mysql init
+#  ansible.builtin.file:
+#    state: directory
+#    path: /var/lib/{{ vars.sysacct_name }}/data/docker-entrypoint-initdb.d
+#    owner: "{{ vars.sysacct_name }}"
+#    group: "{{ vars.sysacct_name }}"
+#    mode: '0750'
+
+#- name: create sql init file
+#  ansible.builtin.template:
+#    src: templates/00_initialize_mysql_db.sql.j2
+#    dest: /var/lib/{{ vars.sysacct_name }}/data/docker-entrypoint-initdb.d/00_initialize_mysql_db.sql
+#    owner: "{{ vars.sysacct_name }}"
+#    group: "{{ vars.sysacct_name }}"
+#    mode: '0600'
+
+- name: just force systemd to reread configs
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    scope: user
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
+  become: true
+  become_user: "{{ vars.sysacct_name }}"
+
+- name: Run a user service when XDG_RUNTIME_DIR is not set on remote login
+  ansible.builtin.systemd_service:
+    name: "{{ service_name }}.service"
+    state: started
+    scope: user
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
+  become: true
+  become_user: "{{ vars.sysacct_name }}"

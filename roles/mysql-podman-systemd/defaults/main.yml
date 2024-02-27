@@ -1,0 +1,9 @@
+---
+# defaults file for mysql-podman-systemd
+
+service_name: mysql
+pod_name: mysql
+
+mysql_version: 5.7
+mysql_uid_container: 999
+mysql_gid_container: 999

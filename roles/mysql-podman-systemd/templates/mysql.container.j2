@@ -1,0 +1,12 @@
+[Install]
+WantedBy=default.target
+
+[Container]
+Image=docker.io/library/mysql:{{ mysql_version }}
+ContainerName=mysql
+Volume=/var/lib/{{ vars.sysacct_name }}/data/db:/var/lib/mysql
+Network={{ pod_name }}.network
+Secret=mysql_root_password-secret-container,type=env,target=MYSQL_ROOT_PASSWORD
+Secret=mysql_database-secret-container,type=env,target=MYSQL_DATABASE
+Secret=mysql_user-secret-container,type=env,target=MYSQL_USER
+Secret=mysql_password-secret-container,type=env,target=MYSQL_PASSWORD
