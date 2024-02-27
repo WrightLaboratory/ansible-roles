@@ -1,0 +1,16 @@
+[Install]
+WantedBy=default.target
+
+[Unit]
+Requires={{ database_container }}.service
+After={{ database_container }}.service
+
+[Kube]
+# Point to the yaml file in the same directory
+Yaml={{ pod_name }}.yaml
+
+# Use the {{ pod_name }} pod network
+Network={{ pod_name }}.network
+
+# Publish the {{ pod_name }} pod ports
+PublishPort=8080:80/tcp

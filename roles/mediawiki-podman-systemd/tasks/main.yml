@@ -17,6 +17,14 @@
     group: "{{ vars.sysacct_name }}"
     mode: '0600'
 
+- name: create quadlet service unit
+  ansible.builtin.template:
+    src: templates/mediawiki.kube.j2
+    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/mediawiki.kube
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0600'
+
 - name: create mediawiki k8s yaml
   ansible.builtin.template:
     src: templates/mediawiki.yaml.j2
@@ -25,30 +33,6 @@
     group: "{{ vars.sysacct_name }}"
     mode: '0600'
     
-- name: create local data directory for mysql
-  ansible.builtin.file:
-    state: directory
-    path: /var/lib/{{ vars.sysacct_name }}/data/db
-    owner: "{{ vars.sysacct_name }}"
-    group: "{{ vars.sysacct_name }}"
-    mode: '0700'
-
-- name: create local data directory for mysql init
-  ansible.builtin.file:
-    state: directory
-    path: /var/lib/{{ vars.sysacct_name }}/data/docker-entrypoint-initdb.d
-    owner: "{{ vars.sysacct_name }}"
-    group: "{{ vars.sysacct_name }}"
-    mode: '0700'
-
-- name: create sql init file
-  ansible.builtin.template:
-    src: templates/00_init_mediawiki_db.sql.j2
-    dest: /var/lib/{{ vars.sysacct_name }}/data/docker-entrypoint-initdb.d/00_init_mediawiki_db.sql
-    owner: "{{ vars.sysacct_name }}"
-    group: "{{ vars.sysacct_name }}"
-    mode: '0600'
-
 - name: create local data directory for mediawiki
   ansible.builtin.file:
     state: directory

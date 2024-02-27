@@ -1,6 +1,8 @@
 ---
 # defaults file for mediawiki-podman-systemd
 
+database_container: mysql
+pod_name: mediawiki
 service_name: mediawiki
 mysql_version: 5.7
 mediawiki_version: 1.41.0
