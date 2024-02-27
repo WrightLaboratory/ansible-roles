@@ -51,7 +51,7 @@
     dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/{{ pod_name }}.network
     owner: "{{ vars.sysacct_name }}"
     group: "{{ vars.sysacct_name }}"
-    mode: '0700'
+    mode: '0600'
 
 - name: create mysql container unit
   ansible.builtin.template:
@@ -59,7 +59,7 @@
     dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/mysql.container
     owner: "{{ vars.sysacct_name }}"
     group: "{{ vars.sysacct_name }}"
-    mode: '0700'
+    mode: '0600'
 
 - name: create local data directory for mysql database
   ansible.builtin.file:
