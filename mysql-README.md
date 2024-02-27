@@ -1,8 +1,12 @@
+# Creating a Rootless MySQL Podman Container as `systemd` Service
+
+## Create Ansible Vault
+
 ```
 ansible-playbook -i localhost, --connection local mysql-ansible-secrets-generate.yml
 ```
 
-If you would like to change the database name or the database user used by MediaWiki application, invoke the playbook using the `-e` option.
+Alternatively, if you would like to change the database name or the database user used by MySQL and the application pod, invoke the playbook using the `-e` option.
 
 ```
 ansible-playbook -i localhost, --connection local \
@@ -11,13 +15,13 @@ ansible-playbook -i localhost, --connection local \
     mysql-ansible-secrets-generate.yml
 ```
 
-Encrypt secrets file
+Encrypt the secrets file
 
 ```
 ansible-vault encrypt --vault-id $(id -un)@${HOME}/.ansible/vaultpassword ${HOME}/.ansible/mysql-secrets.yml
 ```
 
-Run playbook
+## Executing the Ansible Playbook
 
 ```
 ansible-playbook --user="${TARGET_USER}" \
