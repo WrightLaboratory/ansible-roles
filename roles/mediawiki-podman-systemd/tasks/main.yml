@@ -1,6 +1,22 @@
 ---
 # tasks file for mediawiki-podman-systemd
 
+- name: create mediawiki container secrets
+  become_user: "{{ vars.sysacct_name }}"
+  block:
+  - name: create mediawiki_admin_user secret
+    containers.podman.podman_secret:
+      name: mediawiki_admin_user-secret-container
+      data: "{{ mediawiki_admin_user }}"
+      state: present
+      force: true
+  - name: create mediawiki_admin_pass secret
+    containers.podman.podman_secret:
+      name: mediawiki_admin_pass-secret-container
+      data: "{{ mediawiki_admin_pass }}"
+      state: present
+      force: true
+
 - name: create directory for quadlet files
   ansible.builtin.file:
     state: directory
@@ -9,53 +25,132 @@
     group: "{{ vars.sysacct_name }}"
     mode: '0700'
 
-- name: copy quadlet files
-  ansible.builtin.copy:
-    src: files/
-    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd
+- name: create pod network unit
+  ansible.builtin.template:
+    src: templates/pod.network.j2
+    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/{{ pod_name }}.network
     owner: "{{ vars.sysacct_name }}"
     group: "{{ vars.sysacct_name }}"
     mode: '0600'
 
-- name: create quadlet service unit
-  ansible.builtin.template:
-    src: templates/mediawiki.kube.j2
-    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/mediawiki.kube
-    owner: "{{ vars.sysacct_name }}"
-    group: "{{ vars.sysacct_name }}"
-    mode: '0600'
+#- name: create quadlet service unit
+#  ansible.builtin.template:
+#    src: templates/mediawiki.kube.j2
+#    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/mediawiki.kube
+#    owner: "{{ vars.sysacct_name }}"
+#    group: "{{ vars.sysacct_name }}"
+#    mode: '0600'
 
-- name: create mediawiki k8s yaml
-  ansible.builtin.template:
-    src: templates/mediawiki.yaml.j2
-    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/mediawiki.yaml
-    owner: "{{ vars.sysacct_name }}"
-    group: "{{ vars.sysacct_name }}"
-    mode: '0600'
+#- name: create mediawiki k8s yaml
+#  ansible.builtin.template:
+#    src: templates/mediawiki.yaml.j2
+#    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/mediawiki.yaml
+#    owner: "{{ vars.sysacct_name }}"
+#    group: "{{ vars.sysacct_name }}"
+#    mode: '0600'
     
-- name: create local data directory for mediawiki
+- name: create local images directory for mediawiki
   ansible.builtin.file:
     state: directory
-    path: "/var/lib/{{ vars.sysacct_name }}/data/w"
+    path: "/var/lib/{{ vars.sysacct_name }}/data/images"
     owner: "{{ vars.sysacct_name }}"
     group: "{{ vars.sysacct_name }}"
     mode: '0700'
 
-- name: just force systemd to reread configs
-  ansible.builtin.systemd_service:
-    daemon_reload: true
-    scope: user
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
-  become: true
-  become_user: "{{ vars.sysacct_name }}"
+- name: create local tmp directory for mediawiki
+  ansible.builtin.file:
+    state: directory
+    path: "/var/lib/{{ vars.sysacct_name }}/data/tmp"
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0700'
 
-- name: Run a user service when XDG_RUNTIME_DIR is not set on remote login
-  ansible.builtin.systemd_service:
-    name: "{{ service_name }}.service"
-    state: started
-    scope: user
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
-  become: true
+- name: check for existing LocalSettings.php
+  ansible.builtin.stat:
+    path: /var/lib/{{ vars.sysacct_name }}/data/LocalSettings.php
+  register: localsettings_php
+
+- name: initialize mediawiki LocalSettings.php and database
   become_user: "{{ vars.sysacct_name }}"
+  block:
+  - name: launch mediawiki container
+    containers.podman.podman_container:
+      name: init-mediawiki
+      image: docker.io/library/mediawiki:{{ mediawiki_version }}
+      state: started
+      network: systemd-{{ pod_name }}
+      user: 0:0
+      detach: true
+      interactive: true
+      rm: true
+      tty: true
+      env:
+        MEDIAWIKI_SITE_NAME: "{{ mediawiki_site_name }}"
+        MEDIAWIKI_DB_HOST: "{{ mediawiki_db_host }}"
+        MEDIAWIKI_DB_TYPE: "{{ mediawiki_db_type }}"
+        MEDIAWIKI_SITE_SERVER: http://localhost:8080
+        MEDIAWIKI_SCRIPTPATH: /w
+        MEDIAWIKI_SITE_LANG: en
+      secrets:
+      - mediawiki_admin_user-secret-container,type=env,target=MEDIAWIKI_ADMIN_USER
+      - mediawiki_admin_pass-secret-container,type=env,target=MEDIAWIKI_ADMIN_PASS
+      - mysql_root_password-secret-container,type=env,target=MYSQL_ROOT_PASSWORD
+      - mysql_database-secret-container,type=env,target=MYSQL_DATABASE
+      - mysql_user-secret-container,type=env,target=MYSQL_USER
+      - mysql_password-secret-container,type=env,target=MYSQL_PASSWORD
+      volumes: 
+      - /var/lib/{{ vars.sysacct_name }}/data/tmp:/tmp:z
+      command:
+      - sh
+      - -c 
+      - "php /var/www/html/maintenance/run install.php \
+        --confpath /tmp \
+        --dbname $MYSQL_DATABASE \
+        --dbserver $MEDIAWIKI_DB_HOST \
+        --dbtype $MEDIAWIKI_DB_TYPE \
+        --dbuser $MYSQL_USER \
+        --dbpass $MYSQL_PASSWORD \
+        --installdbuser root \
+        --installdbpass $MYSQL_ROOT_PASSWORD \
+        --server $MEDIAWIKI_SITE_SERVER \
+        --scriptpath $MEDIAWIKI_SCRIPTPATH \
+        --lang $MEDIAWIKI_SITE_LANG \
+        --pass $MEDIAWIKI_ADMIN_PASS \
+        --with-extensions \
+        $MEDIAWIKI_SITE_NAME $MEDIAWIKI_ADMIN_USER"
+  - name: move LocalSettings.php from tmp to data directory
+    ansible.builtin.command:
+      argv:
+      - mv
+      - /var/lib/{{ vars.sysacct_name }}/data/tmp/LocalSettings.php
+      - /var/lib/{{ vars.sysacct_name }}/data/LocalSettings.php
+      creates: /var/lib/{{ vars.sysacct_name }}/data/LocalSettings.php
+  when: not localsettings_php.stat.exists
+
+#- name: copy generated LocalSettings.php
+#  ansible.builtin.copy:
+#    src: /var/lib/{{ vars.sysacct_name }}/data/tmp/LocalSettings.php
+#    remote_src: true
+#    dest: /var/lib/{{ vars.sysacct_name }}/data/LocalSettings.php
+#    owner: "{{ vars.sysacct_name }}"
+#    group: "{{ vars.sysacct_name }}"
+
+
+#- name: just force systemd to reread configs
+#  ansible.builtin.systemd_service:
+#    daemon_reload: true
+#    scope: user
+#  environment:
+#    XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
+#  become: true
+#  become_user: "{{ vars.sysacct_name }}"
+
+#- name: Run a user service when XDG_RUNTIME_DIR is not set on remote login
+#  ansible.builtin.systemd_service:
+#    name: "{{ service_name }}.service"
+#    state: started
+#    scope: user
+#  environment:
+#    XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
+#  become: true
+#  become_user: "{{ vars.sysacct_name }}"

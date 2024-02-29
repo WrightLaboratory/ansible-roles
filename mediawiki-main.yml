@@ -5,10 +5,13 @@
   vars:
     nginx_reverse_proxy_app: mediawiki
     nginx_reverse_proxy_app_listen_port: 80
+    pod_name: mediawiki
     sysacct_name: mediawiki
-    sysacct_uid: 967
+    sysacct_uid: 967 # change this depending on disposition of existing system accounts
+    mediawiki_site_name: MyWiki
   roles:
   - base-os
   - podman-systemd
+  - mysql-podman-systemd
   - mediawiki-podman-systemd
   #- nginx-reverse-proxy

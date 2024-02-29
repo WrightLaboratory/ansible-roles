@@ -6,3 +6,5 @@ pod_name: mediawiki
 service_name: mediawiki
 mysql_version: 5.7
 mediawiki_version: 1.41.0
+mediawiki_db_host: mysql # name of the container or pod running mysql
+mediawiki_db_type: mysql
