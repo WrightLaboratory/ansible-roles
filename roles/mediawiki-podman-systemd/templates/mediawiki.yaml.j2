@@ -1,13 +1,33 @@
+# Commenting out for network
+# Could be useful in init-container
+#---
+#apiVersion: v1
+#kind: Secret
+#metadata:
+#  name: db-secrets
+#type: Opaque
+#data:
+#  mysql_user:  {{ mysql_user | b64encode }}
+#  mysql_password:  {{ mysql_password | b64encode }}
+#  mysql_root_password: {{ mysql_root_password | b64encode }}
+#---
+#apiVersion: v1
+#kind: Secret
+#metadata:
+#  name: mediawiki-secrets
+#type: Opaque
+#data:
+#  mediawiki_admin_user:  {{ mediawiki_admin_user | b64encode }}
+#  mediawiki_admin_pass:  {{ mediawiki_admin_pass | b64encode }}
+
 ---
 apiVersion: v1
-kind: Secret
+kind: ConfigMap
 metadata:
-  name: mysql-db-secrets
-type: Opaque
+  name: localsettings_php
 data:
-  username:  {{ mysql_user | b64encode }}
-  password:  {{ mysql_password | b64encode }}
-  root_password: {{ mysql_root_password | b64encode }}
+  LocalSettings.php: |-
+    {{ localsettings_php_content | indent(width=4, first=false) }}
 ---
 apiVersion: v1
 kind: Pod
@@ -23,58 +43,27 @@ spec:
         - CAP_NET_RAW
         - CAP_AUDIT_WRITE
 
-  containers:
-    - name: mysql
-      image: docker.io/library/mysql:{{ mysql_version }}
-      env:
-        - name: MYSQL_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql-db-secrets
-              key: root_password
-        - name: MYSQL_USER
-          valueFrom:
-            secretKeyRef:
-              name: mysql-db-secrets
-              key: username
-        - name: MYSQL_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql-db-secrets
-              key: password
-        - name: MYSQL_DATABASE
-          value: {{ mysql_database }}
-      volumeMounts:
-        - name: mediawiki-db-volume
-          mountPath: /var/lib/mysql
-        - name: mediawiki-db-init-volume
-          mountPath: /docker-entrypoint-initdb.d
 
-  initContainers:
-    - name: initialize-pod-volumes
-      image: docker.io/library/busybox
-      securityContext:
-        runAsUser: 0
-        privileged: true
-      command: ["sh", "-c", "chown -R 999:999 /var/lib/mysql"]
+  containers:
+    - name: mediawiki
+      image: docker.io/library/mediawiki:{{ mediawiki_version }}
+      ports:
+      - containerPort: 80
+        hostPort: 80880
+        protocol: tcp
       volumeMounts:
-        - name: mediawiki-db-volume
-          mountPath: /var/lib/mysql
+        - name: mediawiki-data-volume
+          mountPath: /var/www/html/images
+        - name: mediawiki-localsettings_php-volume
+          mountPath: /var/www/html/LocalSettings.php
+          subPath: LocalSettings.php
+
 
   volumes:
-    - name: mediawiki-db-volume
-      hostPath:
-        path: /var/lib/{{ vars.sysacct_name }}/data/db
-        type: Directory
-    - name: mediawiki-db-init-volume
-      hostPath:
-        path: /var/lib/{{ vars.sysacct_name }}/data/docker-entrypoint-initdb.d
-        type: Directory
     - name: mediawiki-data-volume
       hostPath:
-        path: /var/lib/{{ vars.sysacct_name }}/data/w
+        path: /var/lib/{{ vars.sysacct_name }}/data/images
         type: Directory
-    - name: podman-socket-volume
-      hostPath:
-        path: /run/user/{{ vars.sysacct_uid }}/podman
-        type: Directory
+    - name: mediawiki-localsettings_php-volume
+      configMap:
+        name: localsettings_php
