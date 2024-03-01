@@ -128,8 +128,8 @@
 
 - name: create mediawiki k8s yaml
   ansible.builtin.template:
-    src: templates/mediawiki.yaml.j2
-    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/mediawiki.yaml
+    src: templates/mediawiki.yml.j2
+    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/mediawiki.yml
     owner: "{{ vars.sysacct_name }}"
     group: "{{ vars.sysacct_name }}"
     mode: '0600'
