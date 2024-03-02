@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: localsettings_php
+data:
+  LocalSettings.php: |-
+    {{ localsettings_php_content | indent(width=4, first=false) }}

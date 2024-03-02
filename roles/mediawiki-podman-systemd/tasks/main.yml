@@ -57,10 +57,10 @@
     group: "{{ vars.sysacct_name }}"
     mode: '0700'
 
-- name: check for existing LocalSettings.php
+- name: check if mediawiki has been initialized
   ansible.builtin.stat:
-    path: /var/lib/{{ vars.sysacct_name }}/data/LocalSettings.php
-  register: localsettings_php
+    path: /var/lib/{{ vars.sysacct_name }}/data/.mediawiki_initialized
+  register: mediawiki_initialized
 
 - name: initialize mediawiki LocalSettings.php and database
   become_user: "{{ vars.sysacct_name }}"
@@ -80,7 +80,7 @@
         MEDIAWIKI_SITE_NAME: "{{ mediawiki_site_name }}"
         MEDIAWIKI_DB_HOST: "{{ mediawiki_db_host }}"
         MEDIAWIKI_DB_TYPE: "{{ mediawiki_db_type }}"
-        MEDIAWIKI_SITE_SERVER: http://localhost:8080
+        MEDIAWIKI_SITE_SERVER: http://{{ inventory_hostname }}:8080
         MEDIAWIKI_SITE_LANG: en
       secrets:
       - mediawiki_admin_user-secret-container,type=env,target=MEDIAWIKI_ADMIN_USER
@@ -91,6 +91,8 @@
       - mysql_password-secret-container,type=env,target=MYSQL_PASSWORD
       volumes: 
       - /var/lib/{{ vars.sysacct_name }}/data/tmp:/tmp:z
+      # NB, you must pass `--scriptpath ''`
+      # Otherwise, it will default to `/html`
       command:
       - sh
       - -c 
@@ -104,27 +106,38 @@
         --installdbuser root \
         --installdbpass $MYSQL_ROOT_PASSWORD \
         --server $MEDIAWIKI_SITE_SERVER \
+        --scriptpath '' \
         --lang $MEDIAWIKI_SITE_LANG \
         --pass $MEDIAWIKI_ADMIN_PASS \
         --with-extensions \
         $MEDIAWIKI_SITE_NAME $MEDIAWIKI_ADMIN_USER"
-  - name: move LocalSettings.php from tmp to data directory
-    ansible.builtin.command:
-      argv:
-      - mv
-      - /var/lib/{{ vars.sysacct_name }}/data/tmp/LocalSettings.php
-      - /var/lib/{{ vars.sysacct_name }}/data/LocalSettings.php
-      creates: /var/lib/{{ vars.sysacct_name }}/data/LocalSettings.php
-  when: not localsettings_php.stat.exists
-
-- name: slurp LocalSettings.php
-  ansible.builtin.slurp:
-    src: /var/lib/{{ vars.sysacct_name }}/data/LocalSettings.php
-  register: localsettings_php
-
-- name: set localsettings_php_content fact
-  ansible.builtin.set_fact:
-    localsettings_php_content: "{{ localsettings_php.content | b64decode }}"
+  - name: wait for the creation of LocalSettings.php
+    ansible.builtin.wait_for:
+      delay: 1
+      path: /var/lib/{{ vars.sysacct_name }}/data/tmp/LocalSettings.php
+  - name: slurp LocalSettings.php
+    ansible.builtin.slurp:
+      src: /var/lib/{{ vars.sysacct_name }}/data/tmp/LocalSettings.php
+    register: localsettings_php
+  - name: set localsettings_php_content fact
+    ansible.builtin.set_fact:
+      localsettings_php_content: "{{ localsettings_php.content | b64decode }}"
+  - name: create mediawiki configmap yaml
+    ansible.builtin.template:
+      src: templates/mediawiki-configmap.yml.j2
+      dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/mediawiki-configmap.yml
+      owner: "{{ vars.sysacct_name }}"
+      group: "{{ vars.sysacct_name }}"
+      mode: '0600'
+      force: true
+  - name: set mediawiki initialized
+    ansible.builtin.file:
+      path:  /var/lib/{{ vars.sysacct_name }}/data/.mediawiki_initialized
+      state: touch
+      owner: "{{ vars.sysacct_name }}"
+      group: "{{ vars.sysacct_name }}"
+      mode: '0600'
+  when: not mediawiki_initialized.stat.exists
 
 - name: create mediawiki k8s yaml
   ansible.builtin.template:

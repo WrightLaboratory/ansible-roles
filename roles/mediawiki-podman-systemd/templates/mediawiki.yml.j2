@@ -19,15 +19,6 @@
 #data:
 #  mediawiki_admin_user:  {{ mediawiki_admin_user | b64encode }}
 #  mediawiki_admin_pass:  {{ mediawiki_admin_pass | b64encode }}
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: localsettings_php
-data:
-  LocalSettings.php: |-
-    {{ localsettings_php_content | indent(width=4, first=false) }}
 ---
 apiVersion: v1
 kind: Pod
