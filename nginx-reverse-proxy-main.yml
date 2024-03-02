@@ -4,5 +4,5 @@
   become: true
 
   roles:
-  - base-os
+  - almalinux-8-base
   - nginx-reverse-proxy

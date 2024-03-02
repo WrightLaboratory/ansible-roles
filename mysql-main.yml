@@ -6,6 +6,6 @@
     sysacct_name: mysql
     sysacct_uid: 967 # change this depending on disposition of existing system accounts
   roles:
-  - base-os
+  - almalinux-8-base
   - podman-systemd
   - mysql-podman-systemd

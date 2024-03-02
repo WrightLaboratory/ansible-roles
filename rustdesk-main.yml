@@ -6,6 +6,6 @@
     sysacct_name: rustdesk
     sysacct_uid: 989
   roles:
-  - base-os
+  - almalinux-8-base
   - podman-systemd
   - rustdesk-podman-systemd

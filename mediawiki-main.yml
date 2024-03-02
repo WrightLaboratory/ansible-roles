@@ -10,7 +10,7 @@
     sysacct_uid: 967 # change this depending on disposition of existing system accounts
     mediawiki_site_name: MyWiki
   roles:
-  - base-os
+  - almalinux-8-base
   - podman-systemd
   - mysql-podman-systemd
   - mediawiki-podman-systemd

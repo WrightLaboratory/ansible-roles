@@ -8,7 +8,7 @@
     sysacct_name: jupyterhub
     sysacct_uid: 978
   roles:
-  - base-os
+  - almalinux-8-base
   - podman-systemd
   - jupyterhub-podman-systemd
   - nginx-reverse-proxy
