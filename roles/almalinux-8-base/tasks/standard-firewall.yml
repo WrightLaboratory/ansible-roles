@@ -1,0 +1,28 @@
+---
+- name: install firewalld
+  ansible.builtin.package:
+    name:
+    - firewalld
+
+- name: start firewalld service
+  ansible.builtin.service:
+    name: firewalld
+    enabled: true
+    state: started
+
+- name: Populate service facts
+  ansible.builtin.service_facts:
+
+- name: enable host firewall
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop:
+  - https
+  - http
+  - ssh
+  when:
+  - services['firewalld.service'] is defined
+  - services['firewalld.service']['state'] == 'running'

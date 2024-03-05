@@ -15,3 +15,13 @@
   - mysql-podman-systemd
   - mediawiki-podman-systemd
   - nginx-reverse-proxy
+
+  tasks:
+  - name: apply standard firewall rules
+    ansible.builtin.include_tasks:
+      file: roles/almalinux-8-base/tasks/standard-firewall.yml
+  - name: reboot
+    ansible.builtin.reboot:
+      reboot_timeout: 1200
+  - name: wait for system readiness
+    ansible.builtin.wait_for_connection:
