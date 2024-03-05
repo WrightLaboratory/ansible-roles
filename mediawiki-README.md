@@ -31,6 +31,14 @@ Encrypt the secrets file
 ansible-vault encrypt --vault-id $(id -un)@${HOME}/.ansible/vaultpassword ${HOME}/.ansible/mediawiki-secrets.yml 
 ```
 
+## Nginx Reverse Proxy SSL
+
+Copy gzipped file containing certificate and key generated from your SSL management workstation to this repository's top level directory.
+Extract the key and certificate to `./roles/nginx-revers-proxy/files` directory
+
+```
+service_domain_name="{{ fqdn_of_server }}"
+tar -xvf ${service_domain_name}.gz -C ./roles/nginx-reverse-proxy/files
 
 ## Execute Playbook
 
