@@ -97,7 +97,7 @@
 - name: Run a user service when XDG_RUNTIME_DIR is not set on remote login
   ansible.builtin.systemd_service:
     name: "{{ service_name }}.service"
-    state: started
+    state: restarted
     scope: user
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
