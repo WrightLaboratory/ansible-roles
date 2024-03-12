@@ -68,23 +68,7 @@
     owner: "{{ vars.sysacct_name }}"
     group: "{{ vars.sysacct_name }}"
     mode: '0750'
-
-#- name: create local data directory for mysql init
-#  ansible.builtin.file:
-#    state: directory
-#    path: /var/lib/{{ vars.sysacct_name }}/data/docker-entrypoint-initdb.d
-#    owner: "{{ vars.sysacct_name }}"
-#    group: "{{ vars.sysacct_name }}"
-#    mode: '0750'
-
-#- name: create sql init file
-#  ansible.builtin.template:
-#    src: templates/00_initialize_mysql_db.sql.j2
-#    dest: /var/lib/{{ vars.sysacct_name }}/data/docker-entrypoint-initdb.d/00_initialize_mysql_db.sql
-#    owner: "{{ vars.sysacct_name }}"
-#    group: "{{ vars.sysacct_name }}"
-#    mode: '0600'
-
+    
 - name: just force systemd to reread configs
   ansible.builtin.systemd_service:
     daemon_reload: true

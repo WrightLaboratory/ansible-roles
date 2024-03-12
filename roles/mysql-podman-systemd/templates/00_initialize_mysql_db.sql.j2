@@ -1,4 +1,0 @@
-CREATE DATABASE {{ mysql_database }};
-CREATE USER '{{ mysql_user }}'@'localhost' IDENTIFIED BY '{{ mysql_password }}';
-GRANT ALL ON {{ mysql_database }}.* TO '{{ mysql_user }}'@'localhost' IDENTIFIED BY '{{ mysql_password }}';
-FLUSH PRIVILEGES;
