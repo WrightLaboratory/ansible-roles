@@ -1,0 +1,40 @@
+---
+# MySQL container starts as root but drops down in user mysql (uid = 999)
+# In order for the mysql container process to read SQL initialization files
+# provided through a volume mount the host linked to the container folder
+# /docker-entrypoint-initdb.d/ owned by the container root user, we avail
+# ourselves of a Kubernetes trick to use an initialiazation container to mount
+# the host volume to a container volume. In the case of the busybox image is `/data`.
+# We then change the ownership of the `{{ host_dir_}}:/data` to the 999:999.
+# Furthermore, if we run Podman rootless, we must impersonate the system account on the
+# target node by "becoming" the system account in order for the uid:gid mappings
+# to work correctly.
+
+- name: Fix permissions of mounted host volumes
+  block:
+  - name: reset permissions on files
+    containers.podman.podman_container:
+      name: busybox
+      image: busybox
+      state: started
+      user: 0:0
+      detach: true
+      interactive: true
+      tty: true
+      volumes: 
+      - "{{ host_mount_dir }}:/data:z"
+  - name: execute command in busybox container
+    containers.podman.podman_container_exec:
+      name: busybox
+      user: 0
+      privileged: true
+      argv:
+      - /bin/sh
+      - -c 
+      - chown -R {{ container_uid }}:{{ container_gid }} /data
+  - name: remove container
+    containers.podman.podman_container:
+      name: busybox
+      state: absent
+  become: true
+  become_user: "{{ vars.sysacct_name }}"
