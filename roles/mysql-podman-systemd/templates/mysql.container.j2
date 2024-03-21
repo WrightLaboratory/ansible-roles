@@ -5,6 +5,7 @@ WantedBy=default.target
 Image=docker.io/library/mysql:{{ mysql_version }}
 ContainerName=mysql
 Volume=/var/lib/{{ vars.sysacct_name }}/data/db:/var/lib/mysql
+Volume=/var/lib/{{ vars.sysacct_name }}/data/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 Network={{ pod_name }}.network
 Secret=mysql_root_password-secret-container,type=env,target=MYSQL_ROOT_PASSWORD
 # Secret=mysql_database-secret-container,type=env,target=MYSQL_DATABASE
