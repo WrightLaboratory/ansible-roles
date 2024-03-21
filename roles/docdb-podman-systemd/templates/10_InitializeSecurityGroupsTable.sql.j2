@@ -1,0 +1,11 @@
+-- This table contains all of the users listed in the .htpasswd file
+-- and their authorized actions in the web console.
+-- A CanAdminister value of 1 allows that user to view the administrator-only forms or pages
+-- of the DocDB web application.
+
+INSERT INTO `{{ mysql_database }}`.SecurityGroup
+(Name, Description, CanCreate, CanAdminister, CanView, CanConfig)
+VALUES
+('{{ mysql_user }}', '{{ docdb_project_name }} DocDB admin', 1, 1, 1, 1),
+('{{ docdb_db_user_rw }}', '{{ docdb_project_name }} DocDB user', 1, 0, 1, 0),
+('{{ docdb_db_user_ro }}', '{{ docdb_project_name }} DocDB read-only user', 0, 0, 1, 0);

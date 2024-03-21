@@ -1,0 +1,35 @@
+-- Default sql_mode in docker.io/library/mysql:5.7
+-- SELECT @@GLOBAL.sql_mode;
+-- gives
+-- ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+-- In order to allow implied default of '' for not null TEXT field INSERT
+-- remove `STRICT_TRANS_TABLES`.
+
+SET GLOBAL sql_mode='ONLY_FULL_GROUP_BY,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';
+
+CREATE DATABASE {{ mysql_database }};
+
+-- This user is the docdb admin and has full control over all the tables
+-- When this user is authenticated via basic auth on the web app using the application password
+-- The administrator pages will become available. In order to commit changes, you furnish the
+-- password given here, which should be different as a best practice.
+CREATE USER '{{ mysql_user }}'@'{{ mysql_hostname }}' IDENTIFIED BY '{{ mysql_password }}';
+GRANT ALL ON `{{ mysql_database }}`.* TO '{{ mysql_user }}'@'{{ mysql_hostname }}' IDENTIFIED BY '{{ mysql_password }}';
+CREATE USER '{{ mysql_user }}'@'%' IDENTIFIED BY '{{ mysql_password }}';
+GRANT ALL ON `{{ mysql_database }}`.* TO '{{ mysql_user }}'@'%' IDENTIFIED BY '{{ mysql_password }}';
+
+-- This user is used by the DocDB web app to perform routine CRUD operations on the documents themselves
+-- Users will not need to know this password.
+CREATE USER '{{ docdb_db_user_rw }}'@'{{ mysql_hostname }}' IDENTIFIED BY '{{ docdb_db_user_rw_passwd }}';
+GRANT SELECT,INSERT,UPDATE,DELETE ON `{{ mysql_database }}`.* TO '{{ docdb_db_user_rw }}'@'{{ mysql_hostname }}' IDENTIFIED BY '{{ docdb_db_user_rw_passwd }}';
+CREATE USER '{{ docdb_db_user_rw }}'@'%' IDENTIFIED BY '{{ docdb_db_user_rw_passwd }}';
+GRANT SELECT,INSERT,UPDATE,DELETE ON `{{ mysql_database }}`.* TO '{{ docdb_db_user_rw }}'@'%' IDENTIFIED BY '{{ docdb_db_user_rw_passwd }}';
+
+-- This user is used by the DocDB web app to perform routine R operations on the documents
+-- Users will not need to know this password.
+CREATE USER '{{ docdb_db_user_ro }}'@'{{ mysql_hostname }}' IDENTIFIED BY '{{ docdb_db_user_ro_passwd }}';
+GRANT SELECT ON `{{ mysql_database }}`.* TO '{{ docdb_db_user_ro }}'@'{{ mysql_hostname }}' IDENTIFIED BY '{{ docdb_db_user_ro_passwd }}';
+CREATE USER '{{ docdb_db_user_ro }}'@'%' IDENTIFIED BY '{{ docdb_db_user_ro_passwd }}';
+GRANT SELECT ON `{{ mysql_database }}`.* TO '{{ docdb_db_user_ro }}'@'%' IDENTIFIED BY '{{ docdb_db_user_ro_passwd }}';
+
+FLUSH PRIVILEGES;

@@ -1,0 +1,333 @@
+---
+# tasks file for docdb-podman-systemd
+# /var/lib/{{ vars.sysacct_name }}/data/pvt
+
+
+- name: create local docdb directories
+  ansible.builtin.file:
+    state: directory
+    path: /var/lib/{{ vars.sysacct_name }}/data/{{ item }}
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0700'
+  loop:
+  - documents
+  - pvt
+  
+- name: set build context root dir for docdb
+  ansible.builtin.set_fact:
+    build_root_docdb: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/docdb
+
+- name: set build context root dir for alpine_mysqlclient
+  ansible.builtin.set_fact:
+    build_root_alpine_mysqlclient: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/alpine_mysqlclient
+
+- name: create directory for docdb podman build contexts
+  ansible.builtin.file:
+    state: directory
+    path: "{{ item }}"
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0700'
+  loop:
+  - "{{ build_root_docdb }}"
+  - "{{ build_root_alpine_mysqlclient }}"
+
+- name: download DocDB installation files
+  ansible.builtin.get_url:
+    url: https://api.github.com/repos/ericvaandering/DocDB/tarball/{{ docdb_commit }}
+    dest: /var/lib/{{ vars.sysacct_name }}/.ansible/tmp/docdb-{{ docdb_version }}.tar.gz
+
+- name: create directory for docdb source files
+  ansible.builtin.file:
+    state: directory
+    path: "{{ build_root_docdb }}/{{ docdb_version }}"
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0700'
+
+- name: extract archive into build context directory
+  ansible.builtin.unarchive:
+    remote_src: true
+    src: /var/lib/{{ vars.sysacct_name }}/.ansible/tmp/docdb-{{ docdb_version }}.tar.gz
+    dest: "{{ build_root_docdb }}/{{ docdb_version }}"
+    extra_opts:
+    - --strip=1
+
+- name: copy template files
+  ansible.builtin.copy:
+    remote_src: true
+    src: "{{ build_root_docdb }}/{{ docdb_version }}/DocDB/cgi/{{ item }}.template"
+    dest: "{{ build_root_docdb }}/{{ docdb_version }}/DocDB/cgi/{{ item }}"
+  loop:
+  - ProjectGlobals.pm
+  - ProjectHelp.xml
+  - ProjectMessages.pm
+  - ProjectRoutines.pm
+
+- name: refactor cgi-bin files from modules in source directories
+  block:
+  - name: create new directories
+    ansible.builtin.file:
+      state: directory
+      path: "{{ build_root_docdb }}/{{ docdb_version }}/DocDB/{{ item }}"
+      owner: "{{ vars.sysacct_name }}"
+      group: "{{ vars.sysacct_name }}"
+      mode: '0700'
+    loop:
+    - cgi-bin
+    - modules
+  - name: find cgi scripts in source
+    ansible.builtin.find:
+      paths: "{{ build_root_docdb }}/{{ docdb_version }}/DocDB/cgi"
+      excludes: ['*.pm']
+      use_regex: false
+    register: cgi_scripts
+  - name: find cgi modules in source
+    ansible.builtin.find:
+      paths: "{{ build_root_docdb }}/{{ docdb_version }}/DocDB/cgi"
+      patterns: ['*.pm']
+      use_regex: false
+    register: cgi_modules
+  - name: copy cgi scripts
+    ansible.builtin.copy:
+      remote_src: true
+      src: "{{ item.path }}"
+      dest: "{{ build_root_docdb }}/{{ docdb_version }}/DocDB/cgi-bin"
+      owner: "{{ vars.sysacct_name }}"
+      group: "{{ vars.sysacct_name }}"
+    loop: "{{cgi_scripts.files}}"
+  - name: copy cgi modules
+    ansible.builtin.copy:
+      remote_src: true
+      src: "{{ item.path }}"
+      dest: "{{ build_root_docdb }}/{{ docdb_version }}/DocDB/modules"
+      owner: "{{ vars.sysacct_name }}"
+      group: "{{ vars.sysacct_name }}"
+    loop: "{{cgi_modules.files}}"
+
+- name: create customized DocDB configuration from templates
+  ansible.builtin.replace:
+    path: "{{ build_root_docdb }}/{{ docdb_version }}/DocDB/cgi/ProjectGlobals.pm"
+    regexp: "{{ item.regex_str }}"
+    replace: "{{ item.subst_str }}"
+  loop:
+  - regex_str: '(\$db_name\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1{{ mysql_database }}\3'
+  - regex_str: '(\$db_host\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1mysql\3'
+  - regex_str: '(\$db_rwuser\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1{{ docdb_db_user_rw }}\3'
+  - regex_str: '(\$db_rwpass\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1{{ docdb_db_user_rw_passwd }}\3'
+  - regex_str: '(\$db_rouser\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1{{ docdb_db_user_ro }}\3'
+  - regex_str: '(\$db_ropass\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1{{ docdb_db_user_ro_passwd }}\3'
+  - regex_str: '(\$file_root\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: \1/usr/local/apache2/htdocs/documents\3
+  - regex_str: '(\$script_root\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1/usr/local/apache2/cgi-bin\3'
+  - regex_str: '(\$web_root\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1http://{{ service_domain_name }}/{{ docdb_project_name }}/docs\3'
+  - regex_str: '(\$cgi_root\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1http://{{ service_domain_name }}/{{ docdb_project_name }}\3'
+  - regex_str: '(\$cgi_path\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1/cgi-bin/\3'
+  - regex_str: '(\$DBWebMasterEmail\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1{{  docdb_webmaster_email  |  replace("@", "\@")  }}\3'
+  - regex_str: '(\$DBWebMasterName\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1{{ docdb_webmaster_email }}\3'
+  - regex_str: '(\$AuthUserFile\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1/usr/local/apache2/pvt/.htpasswd\3'
+  - regex_str: '(\$MailServer\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1localhost\3'
+  - regex_str: '(\$Project\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1{{ docdb_project_name }}\3'
+  - regex_str: '(\$ShortProject\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1{{ docdb_project_name }}\3'
+  - regex_str: '(\$WelcomeMessage\s*=\s*")(.*?)(";\s*#*.*)?$'
+    subst_str: '\1Welcome to the $Project DocDB,<br> the repository for all $Project documents, talks, and publications.\3'
+
+- name: slurp contents of ProjectGlobals.pm
+  ansible.builtin.slurp:
+    path: "{{ build_root_docdb }}/{{ docdb_version }}/DocDB/cgi/ProjectGlobals.pm"
+  register: projectglobals_pm
+
+- name: create configmap yaml files for use by kube quadlet
+  ansible.builtin.template:
+    src: templates/{{ item.input }}
+    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/{{ item.output }}
+  loop:
+    - input: docdb.kube.j2
+      output: docdb.kube
+    - input: docdb-configmap.yml.j2
+      output: docdb-configmap.yml
+    - input: httpd-configmap.yml.j2
+      output: httpd-configmap.yml
+    - input: httpd_virthost_docdb-configmap.yml.j2
+      output: httpd_virthost_docdb-configmap.yml
+
+- name: create Containerfile specification for alpine-mysqlclient
+  ansible.builtin.copy:
+    dest: "{{ build_root_alpine_mysqlclient }}/Containerfile"
+    content: |
+      FROM docker.io/library/alpine:latest
+      RUN apk add --no-cache mysql-client
+    
+- name: create Containerfile specfication for docdb
+  ansible.builtin.copy:
+    dest: "{{ build_root_docdb }}/Containerfile"
+    content: |
+      FROM docker.io/library/httpd:2.4
+      RUN apt-get update \
+      && apt-get -y install \
+       libapache2-mod-perl2 \
+       libcgi-pm-perl \
+       libcgi-untaint-perl \
+       libdata-ical-perl \
+       libdatetime-format-ical-perl \
+       libdatetime-perl \
+       libdbi-perl \
+       libdbd-mysql-perl \
+       libfile-mimeinfo-perl \
+       libhtml-parser-perl \
+       libmailtools-perl \
+       libtest-taint-perl \
+       libuniversal-require-perl \
+       libdigest-sha-perl \
+       libxml-grove-perl \
+       libxml-parser-perl \
+       libxml-simple-perl \
+       libxml-twig-perl \
+       libtaint-util-perl \
+      && rm -rf /var/lib/apt/lists/*
+
+      # Create empty folder /usr/local/apache2/pvt to contain .htpasswd
+      # Mount this to host volume or secrets volume containing .htpasswd
+      # Create empty folder /usr/local/apache2/htdocs/documents to contain DocDB
+      # document files and versions.
+      # Create folder for static content.
+      # Purge existing cgi scripts
+      
+      RUN mkdir -p /usr/local/apache2/pvt \
+      && mkdir -p /usr/local/apache2/htdocs/documents \
+      && mkdir -p /usr/local/apache2/htdocs/Static \
+      && rm /usr/local/apache2/cgi-bin/*
+
+      # Copy CGI Scripts
+      COPY ./{{ docdb_version }}/DocDB/cgi-bin/* /usr/local/apache2/cgi-bin/
+
+      # Copy CGI Modules. Place Perl modules in standard location '$(perl -V:installsiteli'b)'
+      # /usr/local/share/perl/5.36.0, in this version of httpd container image
+      COPY ./{{ docdb_version }}/DocDB/modules/* /usr/local/share/perl/5.36.0/
+
+      # Copy static content
+      COPY ./{{ docdb_version }}/DocDB/html/* /usr/local/apache2/htdocs/Static/
+
+      # Fix  permissions
+      RUN chown -R root:www-data /usr/local/apache2 \
+      && chmod -R 755 /usr/local/apache2 \
+      && chmod -R 775 /usr/local/apache2/htdocs/documents \
+      && chmod -R 750 /usr/local/apache2/pvt
+
+- name: generate .htpasswd file
+  block:
+  - name: start container to run htpasswd
+    containers.podman.podman_container:
+      name: htpasswd
+      image: docker.io/library/httpd:2.4
+      state: started
+      detach: true
+      interactive: true
+      tty: true
+      volumes: 
+      - "/var/lib/{{ vars.sysacct_name }}/data/pvt:/tmp:z"
+  - name: generate new htpasswd file
+    containers.podman.podman_container_exec:
+      name: htpasswd
+      command: htpasswd {{ item.opt }} /tmp/.htpasswd '{{ item.http_user }}' '{{ item.http_passwd }}'   
+    loop:
+    - http_user: "{{ mysql_user }}"
+      http_passwd: "{{ docdb_web_admin_password }}"
+      opt: -Bbc
+    - http_user: "{{ docdb_db_user_rw }}"
+      http_passwd: "{{ docdb_web_user_passwd }}"
+      opt: -Bb
+    - http_user: "{{ docdb_db_user_ro }}"
+      http_passwd: "{{ docdb_web_reader_passwd }}"
+      opt: -Bb
+  - name: remove container
+    containers.podman.podman_container:
+      name: htpasswd
+      state: absent
+  become: true
+  become_user: " {{ vars.sysacct_name }}"
+
+- name: fix permissions local docdb directory permissions for container access
+  ansible.builtin.include_tasks:
+    file: roles/docdb-podman-systemd/tasks/fix_directory_permissions.yml
+  vars:
+    host_mount_dir: /var/lib/{{ vars.sysacct_name }}/data/{{ item }}
+    container_uid: "{{ httpd_uid_container }}"
+    container_gid: "{{ httpd_gid_container }}"
+  loop:
+  - documents
+  - pvt
+
+#- name: build alpine linux mysql client
+#  containers.podman.podman_image:
+#    name: alpine/mysqlclient:latest
+#    path: "{{ build_root_alpine_mysqlclient }}"
+#    state: present
+#  become: true
+#  become_user: "{{ vars.sysacct_name }}"
+#  register: alpine_mysqlclient
+
+
+- name: build docdb image
+  containers.podman.podman_image:
+    name: "localhost/docdb:{{ docdb_version }}"
+    path: "{{ build_root_docdb }}"
+    state: present
+  become: true
+  become_user: "{{ vars.sysacct_name }}"
+  register: docdb
+    
+- name: show local docdb image id
+  ansible.builtin.debug:
+    msg: "Local DocDB container image id: {{ docdb.image[0].Id[:12] }}"
+
+- name: create configmap yaml files for use by kube quadlet
+  ansible.builtin.template:
+    src: templates/{{ item.input }}
+    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd/{{ item.output }}
+  loop:
+  - input: docdb.yml.j2
+    output: docdb.yml
+
+- name: just force systemd to reread configs
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    scope: user
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
+  become: true
+  become_user: "{{ vars.sysacct_name }}"
+
+- name: Run a user service when XDG_RUNTIME_DIR is not set on remote login
+  ansible.builtin.systemd_service:
+    name: "{{ service_name }}.service"
+    state: started
+    scope: user
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ vars.sysacct_uid }}"
+  become: true
+  become_user: "{{ vars.sysacct_name }}"
+
+#- name: check if docdb mysql has been initialized
+#  ansible.builtin.stat:
+#    path: /var/lib/{{ vars.sysacct_name }}/data/.docdb_mysql_initialized
+#  register: docdb_mysql_initialized
+
+  

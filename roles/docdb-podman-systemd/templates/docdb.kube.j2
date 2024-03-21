@@ -1,0 +1,21 @@
+[Install]
+WantedBy=default.target
+
+[Unit]
+Requires={{ database_container }}.service
+After={{ database_container }}.service
+
+[Kube]
+# Point to the yaml file in the same directory
+Yaml={{ pod_name }}.yml
+
+# Use the {{ pod_name }} pod network
+Network={{ pod_name }}.network
+
+# Publish the {{ pod_name }} pod ports
+PublishPort=8080:80/tcp
+
+# Create a new ConfigMap
+ConfigMap={{ pod_name }}-configmap.yml
+ConfigMap=httpd-configmap.yml
+ConfigMap=httpd_virthost_docdb-configmap.yml

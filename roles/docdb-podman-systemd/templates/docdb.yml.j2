@@ -1,0 +1,76 @@
+# Commenting out for network
+# Could be useful in init-container
+#---
+#apiVersion: v1
+#kind: Secret
+#metadata:
+#  name: db-secrets
+#type: Opaque
+#data:
+#  mysql_user:  {{ mysql_user | b64encode }}
+#  mysql_password:  {{ mysql_password | b64encode }}
+#  mysql_root_password: {{ mysql_root_password | b64encode }}
+#---
+#apiVersion: v1
+#kind: Secret
+#metadata:
+#  name: docdb-secrets
+#type: Opaque
+#data:
+#  docdb_admin_user:  {{ mysql_user | b64encode }}
+#  docdb_admin_pass:  {{ mysql_password | b64encode }}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: docdb
+spec:
+  securityContext:
+    seLinuxOptions:
+      type: spc_t
+    capabilities:
+      drop:
+        - CAP_MKNOD
+        - CAP_NET_RAW
+        - CAP_AUDIT_WRITE
+
+  containers:
+    - name: docdb
+      image: {{ docdb.image[0].Id[:12] }}
+      ports:
+      - containerPort: 80
+        hostPort: 80880
+        protocol: tcp
+      volumeMounts:
+        - name: docdb-docs-volume
+          mountPath: /usr/local/apache2/htdocs/documents
+        - name: httpd-pvt-volume
+          mountPath: /usr/local/apache2/pvt
+        - name: docdb-projectglobals_pm-volume
+          mountPath: /usr/local/share/perl/5.36.0/ProjectGlobals.pm
+          subPath: ProjectGlobals.pm
+        - name: httpd_conf-volume
+          mountPath: /usr/local/apache2/conf/httpd.conf
+          subPath: httpd.conf
+        - name: httpd_virthost_docdb_conf-volume
+          mountPath: /usr/local/apache2/conf/extra/httpd_virthost_docdb.conf
+          subPath: httpd_virthost_docdb.conf
+
+  volumes:
+    - name: docdb-docs-volume
+      hostPath:
+        path: /var/lib/{{ vars.sysacct_name }}/data/documents
+        type: Directory
+    - name: docdb-projectglobals_pm-volume
+      configMap:
+        name: projectglobals_pm
+    - name: httpd_conf-volume
+      configMap:
+        name: httpd_conf
+    - name: httpd_virthost_docdb_conf-volume
+      configMap:
+        name: httpd_virthost_docdb_conf
+    - name: httpd-pvt-volume
+      hostPath:
+        path: /var/lib/{{ vars.sysacct_name }}/data/pvt
+        type: Directory
