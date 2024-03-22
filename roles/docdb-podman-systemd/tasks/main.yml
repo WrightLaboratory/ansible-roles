@@ -55,6 +55,11 @@
     extra_opts:
     - --strip=1
 
+- name: patch DocDBHelp
+  ansible.posix.patch:
+    src: DocDBHelp.patch
+    dest: "{{ build_root_docdb }}/{{ docdb_version }}/DocDB/cgi/DocDBHelp"
+
 - name: copy Static files
   ansible.builtin.copy:
     remote_src: true
