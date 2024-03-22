@@ -11,7 +11,8 @@
     group: "{{ vars.sysacct_name }}"
     mode: '0700'
   loop:
-  - documents
+  - htdocs
+  - htdocs/Static
   - pvt
   
 - name: set build context root dir for docdb
@@ -53,6 +54,15 @@
     dest: "{{ build_root_docdb }}/{{ docdb_version }}"
     extra_opts:
     - --strip=1
+
+- name: copy Static files
+  ansible.builtin.copy:
+    remote_src: true
+    src: "{{ build_root_docdb }}/{{ docdb_version }}/DocDB/html/"
+    dest: /var/lib/{{ vars.sysacct_name }}/data/htdocs/Static/
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0700'
 
 - name: copy template files
   ansible.builtin.copy:
@@ -125,13 +135,13 @@
   - regex_str: '(\$db_ropass\s*=\s*")(.*?)(";\s*#*.*)?$'
     subst_str: '\1{{ docdb_db_user_ro_passwd }}\3'
   - regex_str: '(\$file_root\s*=\s*")(.*?)(";\s*#*.*)?$'
-    subst_str: \1/usr/local/apache2/htdocs/documents\3
+    subst_str: \1/usr/local/apache2/htdocs/\3
   - regex_str: '(\$script_root\s*=\s*")(.*?)(";\s*#*.*)?$'
-    subst_str: '\1/usr/local/apache2/cgi-bin\3'
+    subst_str: '\1/usr/local/apache2/cgi-bin/\3'
   - regex_str: '(\$web_root\s*=\s*")(.*?)(";\s*#*.*)?$'
-    subst_str: '\1http://{{ service_domain_name }}/{{ docdb_project_name }}/docs\3'
+    subst_str: '\1http://{{ service_domain_name }}/{{ docdb_project_name }}/docs/\3'
   - regex_str: '(\$cgi_root\s*=\s*")(.*?)(";\s*#*.*)?$'
-    subst_str: '\1http://{{ service_domain_name }}/{{ docdb_project_name }}\3'
+    subst_str: '\1http://{{ service_domain_name }}/{{ docdb_project_name }}/\3'
   - regex_str: '(\$cgi_path\s*=\s*")(.*?)(";\s*#*.*)?$'
     subst_str: '\1/cgi-bin/\3'
   - regex_str: '(\$DBWebMasterEmail\s*=\s*")(.*?)(";\s*#*.*)?$'
@@ -205,14 +215,9 @@
 
       # Create empty folder /usr/local/apache2/pvt to contain .htpasswd
       # Mount this to host volume or secrets volume containing .htpasswd
-      # Create empty folder /usr/local/apache2/htdocs/documents to contain DocDB
-      # document files and versions.
-      # Create folder for static content.
       # Purge existing cgi scripts
       
       RUN mkdir -p /usr/local/apache2/pvt \
-      && mkdir -p /usr/local/apache2/htdocs/documents \
-      && mkdir -p /usr/local/apache2/htdocs/Static \
       && rm /usr/local/apache2/cgi-bin/*
 
       # Copy CGI Scripts
@@ -222,13 +227,10 @@
       # /usr/local/share/perl/5.36.0, in this version of httpd container image
       COPY ./{{ docdb_version }}/DocDB/modules/* /usr/local/share/perl/5.36.0/
 
-      # Copy static content
-      COPY ./{{ docdb_version }}/DocDB/html/* /usr/local/apache2/htdocs/Static/
-
       # Fix  permissions
       RUN chown -R root:www-data /usr/local/apache2 \
       && chmod -R 755 /usr/local/apache2 \
-      && chmod -R 775 /usr/local/apache2/htdocs/documents \
+      && chmod -R 775 /usr/local/apache2/htdocs \
       && chmod -R 750 /usr/local/apache2/pvt
 
 - name: generate .htpasswd file
@@ -272,7 +274,8 @@
     container_uid: "{{ httpd_uid_container }}"
     container_gid: "{{ httpd_gid_container }}"
   loop:
-  - documents
+  - htdocs
+  - htdocs/Static
   - pvt
 
 #- name: build alpine linux mysql client
@@ -305,6 +308,14 @@
   loop:
   - input: docdb.yml.j2
     output: docdb.yml
+
+- name: allow non-privileged process open ports below 1024
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_unprivileged_port_start
+    value: 0
+    sysctl_set: yes
+    state: present
+    reload: yes
 
 - name: just force systemd to reread configs
   ansible.builtin.systemd_service:

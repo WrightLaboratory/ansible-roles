@@ -3,8 +3,8 @@
   gather_facts: true
   become: true
   vars:
-    #nginx_reverse_proxy_app: docdb
-    #nginx_reverse_proxy_app_listen_port: 80
+    nginx_reverse_proxy_app: docdb
+    nginx_reverse_proxy_app_listen_port: 80
     service_domain_name: "{{ inventory_hostname }}"
     pod_name: docdb
     sysacct_name: docdb
@@ -59,6 +59,6 @@
   - name: include docdb podman systemd
     include_role: 
       name: docdb-podman-systemd
-  #- name: nginx-reverse-proxy
-  #  include_role:
-  #    name: nginx-reverse-proxy
+#  - name: nginx-reverse-proxy
+#    include_role:
+#      name: nginx-reverse-proxy

@@ -22,8 +22,8 @@ data:
             Require all granted
         </Directory>
     
-        Alias /{{ docdb_project_name }}/docs "/usr/local/apache2/htdocs/documents"
-        <Directory "/usr/local/apache2/htdocs/documents">
+        Alias /{{ docdb_project_name }}/docs "/usr/local/apache2/htdocs"
+        <Directory "/usr/local/apache2/htdocs">
             Order allow,deny
             Allow from all
             Require all granted

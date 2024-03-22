@@ -6,10 +6,10 @@ pod_name: docdb
 service_name: docdb
 
 # pinned release
-docdb_version: "8.8.9"
-docdb_commit: c2f0f79
+# docdb_version: "8.8.9"
+# docdb_commit: c2f0f79
 
 container_httpd_listen: 80
 # current release
-# docdb_version: "8.8.10b1"
-# docdb_commit: 76f8de1
+docdb_version: "8.8.10b1"
+docdb_commit: 76f8de1
