@@ -139,6 +139,9 @@
   - name: install base os packages
     ansible.builtin.package:
       name:
+      - git
+      - patch
+      - tmux
       - python3.11
       - python3.11-pip
       - python3.11-cryptography
