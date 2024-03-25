@@ -1,8 +1,0 @@
----
-- hosts: "{{ target_hosts | default('all') }}"
-  gather_facts: true
-  become: true
-
-  roles:
-  - almalinux-8-base
-  - nginx-reverse-proxy
