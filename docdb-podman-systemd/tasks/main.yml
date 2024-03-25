@@ -160,7 +160,7 @@
   - regex_str: '(\$Project\s*=\s*")(.*?)(";\s*#*.*)?$'
     subst_str: '\1{{ docdb_project_name }}\3'
   - regex_str: '(\$ShortProject\s*=\s*")(.*?)(";\s*#*.*)?$'
-    subst_str: '\1{{ docdb_project_name }}\3'
+    subst_str: '\1{{ docdb_shortproject_name }}\3'
   - regex_str: '(\$WelcomeMessage\s*=\s*")(.*?)(";\s*#*.*)?$'
     subst_str: '\1Welcome to the $Project DocDB,<br> the repository for all $Project documents, talks, and publications.\3'
 
