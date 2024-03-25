@@ -37,13 +37,13 @@
     group: "{{ vars.sysacct_name }}"
     mode: '0700'
 
-- name: copy quadlet files
-  ansible.builtin.copy:
-    src: files/
-    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd
-    owner: "{{ vars.sysacct_name }}"
-    group: "{{ vars.sysacct_name }}"
-    mode: '0600'
+#- name: copy quadlet files
+#  ansible.builtin.copy:
+#    src: files/
+#    dest: /var/lib/{{ vars.sysacct_name }}/.config/containers/systemd
+#    owner: "{{ vars.sysacct_name }}"
+#    group: "{{ vars.sysacct_name }}"
+#    mode: '0600'
 
 - name: create pod network unit
   ansible.builtin.template:
