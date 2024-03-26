@@ -14,26 +14,26 @@ data:
         Protocols h2 http/1.1
         ServerName {{ service_domain_name }}:443
 
-        #BEGIN: Section for {{ docdb_project_name }} DocDB instance
-        Alias  /{{ docdb_project_name }}/Static "/usr/local/apache2/htdocs/Static"
+        #BEGIN: Section for {{ docdb_shortproject_name }} DocDB instance
+        Alias  /{{ docdb_shortproject_name }}/Static "/usr/local/apache2/htdocs/Static"
         <Directory "/usr/local/apache2/htdocs/Static">
             Order allow,deny
             Allow from all
             Require all granted
         </Directory>
     
-        Alias /{{ docdb_project_name }}/docs "/usr/local/apache2/htdocs"
+        Alias /{{ docdb_shortproject_name }}/docs "/usr/local/apache2/htdocs"
         <Directory "/usr/local/apache2/htdocs">
             Order allow,deny
             Allow from all
             Require all granted
             AuthType Basic
-            AuthName "{{ docdb_project_name }}"
+            AuthName "{{ docdb_shortproject_name }}"
             AuthUserFile /usr/local/apache2/pvt/.htpasswd
             Require user "{{ mysql_user }}" "{{ docdb_db_user_rw }}" "{{ docdb_db_user_ro }}"
         </Directory>
     
-        ScriptAlias /{{ docdb_project_name }}       "/usr/local/apache2/cgi-bin"
+        ScriptAlias /{{ docdb_shortproject_name }}       "/usr/local/apache2/cgi-bin"
         <Directory "/usr/local/apache2/cgi-bin">
             Options Indexes FollowSymLinks ExecCGI
             AddHandler cgi-script .pm
@@ -41,10 +41,10 @@ data:
             Order allow,deny
             Allow from all
             AuthType Basic
-            AuthName "{{ docdb_project_name }}"
+            AuthName "{{ docdb_shortproject_name }}"
             AuthUserFile /usr/local/apache2/pvt/.htpasswd
             Require user "{{ mysql_user }}" "{{ docdb_db_user_rw }}" "{{ docdb_db_user_ro }}"
         </Directory>
-        #END: Section for {{ docdb_project_name }} DocDB instance
+        #END: Section for {{ docdb_shortproject_name }} DocDB instance
 
     </VirtualHost>
