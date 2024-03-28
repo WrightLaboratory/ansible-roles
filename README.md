@@ -41,11 +41,21 @@ Activate the virtual environment:
 source ./.venv/bin/activate
 ```
 
-Create the `demo` playbook:
+Create the `demo` playbook.
+This playbook will update an AlmaLinux 8 base instance.
+You may add other roles on top it.
+To prepare the instance to host rootless Podman containers add `- podman-systemd`.
+
+A fully worked out example is at [`docdb-podman-systemd`](https://github.com/WrightLaboratory/docdb-podman-systemd.git)
 
 ```bash
 tee main.yml<<'_EOF'
+- hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: true
+  become: true
 
+  roles:
+  - almalinux-8-base
 _EOF
 ```
 
@@ -61,5 +71,25 @@ git commit -m 'Initial commit'
 Add this repository as a submodule.
 
 ```bash
-git submodule add roles
+git submodule add https://github.com/WrightLaboratory/ansible-roles.git ./roles
+
+# Force the parent not to track the submodule files
+git rm -r --cached ./roles
+# Re-add roles as a submodule
+git submodule add ./roles
+
+# NB, git will give a status of:
+#  `modified:   roles (modified content)`.
+# Do not add and commit and push to parent repo
+```
+
+Execute the playbook.
+
+```bash
+export TARGET_FQDN="{{ TargetNodeFQDN }}"
+export TARGET_USER="{{ NameOfUserWithAdminPrivilegesOnTargetNode }}"
+
+ansible-playbook --user="${TARGET_USER}" \
+    -i "${TARGET_FQDN}", \
+    main.yml
 ```
