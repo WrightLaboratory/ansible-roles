@@ -43,6 +43,14 @@
   community.crypto.openssl_dhparam:
     path: /etc/ssl/dhparams.pem
 
+- name: copy main nginx.conf file
+  ansible.builtin.copy:
+    src: ./files/nginx.conf
+    dest:  /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    backup: true
+
 - name: create nginx ssl configuration snippet directory
   ansible.builtin.file:
     name: /etc/nginx/snippets
