@@ -25,6 +25,14 @@
     group: "{{ vars.sysacct_name }}"
     mode: '0600'
 
+- name: create jupyterhub_users.toml
+  ansible.builtin.template:
+    src: templates/jupyterhub_users.toml.j2
+    dest: /var/lib/{{ vars.sysacct_name }}/data/jupyterhub/jupyterhub_users.toml
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0600'
+
 - name: create local data directory for postgres
   ansible.builtin.file:
     state: directory
