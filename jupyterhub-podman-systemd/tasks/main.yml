@@ -8,7 +8,15 @@
     owner: "{{ vars.sysacct_name }}"
     group: "{{ vars.sysacct_name }}"
     mode: '0700'
-    
+
+- name: create local data directory for jupyterhub
+  ansible.builtin.file:
+    state: directory
+    path: "/var/lib/{{ vars.sysacct_name }}/data/jupyterhub"
+    owner: "{{ vars.sysacct_name }}"
+    group: "{{ vars.sysacct_name }}"
+    mode: '0700'
+
 - name: copy files
   ansible.builtin.copy:
     src: files/
@@ -37,14 +45,6 @@
   ansible.builtin.file:
     state: directory
     path: "/var/lib/{{ vars.sysacct_name }}/data/postgres"
-    owner: "{{ vars.sysacct_name }}"
-    group: "{{ vars.sysacct_name }}"
-    mode: '0700'
-
-- name: create local data directory for jupyterhub
-  ansible.builtin.file:
-    state: directory
-    path: "/var/lib/{{ vars.sysacct_name }}/data/jupyterhub"
     owner: "{{ vars.sysacct_name }}"
     group: "{{ vars.sysacct_name }}"
     mode: '0700'
